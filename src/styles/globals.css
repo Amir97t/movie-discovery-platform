@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Expose tokens as Tailwind utilities (bg-background, text-fg, border-line…). */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text-primary);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-foreground);
+  --color-favorite: var(--favorite);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-skeleton: var(--skeleton);
+  --color-on-art: var(--on-art);
+  --color-swatch-gold: var(--swatch-gold);
+  --color-swatch-crimson: var(--swatch-crimson);
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-persian: var(--font-vazirmatn), "Vazirmatn", Tahoma, "Segoe UI", ui-sans-serif,
+    system-ui, sans-serif;
+}
+
+@theme {
+  --radius-card: 0.75rem;
+  --radius-control: 0.625rem;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--background);
+    color: var(--text-primary);
+  }
+
+  /* Persian: dedicated family and a taller line height for connected script. */
+  html[lang="fa"] body {
+    font-family: var(--font-persian);
+    line-height: 1.75;
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+/* Container with the plan's gutters: 16px narrow, 24px sm+, 32px lg+. */
+@utility page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1rem;
+
+  @media (min-width: 40rem) {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

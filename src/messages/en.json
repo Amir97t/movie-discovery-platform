@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "title": "FRAME — movie discovery (design prototype)",
+    "description": "A bilingual movie-discovery interface prototype with a four-theme design system. All content shown is sample data."
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "brandHome": "FRAME — go to home"
+  },
+  "nav": {
+    "label": "Primary navigation",
+    "home": "Home",
+    "discover": "Discover",
+    "library": "Library",
+    "profile": "Profile",
+    "soon": "coming soon"
+  },
+  "appearance": {
+    "trigger": "Appearance and language",
+    "language": "Language",
+    "palette": "Palette",
+    "mode": "Mode",
+    "palettes": { "gold": "Gold", "crimson": "Crimson" },
+    "modes": { "light": "Light", "dark": "Dark", "system": "System" }
+  },
+  "home": {
+    "heroKicker": "Featured · sample data",
+    "heroCta": "See tonight's picks",
+    "genresTitle": "Genres in this sample",
+    "picksTitle": "Tonight's picks",
+    "picksNote": "Fictional sample titles used to review the design."
+  },
+  "movie": {
+    "minutes": "{value} min",
+    "ratingValue": "Rating {value} out of 10",
+    "notRated": "Not rated"
+  },
+  "genres": {
+    "action": "Action",
+    "animation": "Animation",
+    "comedy": "Comedy",
+    "documentary": "Documentary",
+    "drama": "Drama",
+    "romance": "Romance",
+    "scifi": "Sci-Fi",
+    "thriller": "Thriller"
+  },
+  "states": {
+    "emptyTitle": "Nothing to show yet",
+    "emptyDescription": "There are no titles to display right now.",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "The catalog could not be loaded. Please try again later."
+  },
+  "notFound": {
+    "title": "This page is not on the reel",
+    "description": "The page you are looking for does not exist or has moved.",
+    "back": "Back to home"
+  },
+  "footer": {
+    "note": "Design prototype. All titles, ratings and artwork are fictional placeholder content, not a real catalog."
+  }
+}

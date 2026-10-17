@@ -1,0 +1,113 @@
+/*
+ * Design tokens. One shared system: components only ever read these
+ * variables; palette and mode change the values, never the component code.
+ * DOM contract: <html data-palette="gold|crimson" data-mode="light|dark">.
+ *
+ * Starting values come from docs/DESIGN_SYSTEM_AND_RESPONSIVE_PLAN.md.
+ * Documented adjustments (verified with WCAG contrast calculations, see
+ * docs/IMPLEMENTATION_NOTES.md and src/styles/tokens.test.ts):
+ *  - crimson/dark: --accent #E5484D -> #EC5A5F and --accent-foreground
+ *    #FFFFFF -> #101114 (white on #E5484D was 3.91:1).
+ *  - new --border-strong token for control outlines (3:1 non-text contrast).
+ */
+
+:root {
+  /* Theme-independent */
+  --swatch-gold: #f2b544;
+  --swatch-crimson: #ec5a5f;
+  --on-art: #f7f4ec; /* text drawn over artwork + scrim */
+  --scrim: rgb(8 8 10 / 0.72);
+
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  --duration-fast: 160ms;
+  --duration-base: 200ms;
+  --duration-panel: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Noir Gold / Dark (also the no-attribute fallback) */
+:root,
+[data-palette="gold"][data-mode="dark"] {
+  --background: #101114;
+  --surface: #191a1f;
+  --surface-raised: #242429;
+  --border: #34353c;
+  --border-strong: #74757e;
+  --text-primary: #f5f3ef;
+  --text-muted: #a3a3aa;
+  --accent: #f2b544;
+  --accent-hover: #ffd36e;
+  --accent-foreground: #17130a;
+  --favorite: #e5484d;
+  --success: #3dd68c;
+  --warning: #f5a524;
+  --danger: #ff6369;
+  --focus-ring: #ffd36e;
+  --overlay: rgb(0 0 0 / 0.6);
+  --skeleton: #2a2b31;
+}
+
+/* Noir Gold / Light */
+[data-palette="gold"][data-mode="light"] {
+  --background: #f7f5ef;
+  --surface: #ffffff;
+  --surface-raised: #fffdf8;
+  --border: #e4e0d6;
+  --border-strong: #86827a;
+  --text-primary: #201e19;
+  --text-muted: #6c6a63;
+  --accent: #885600;
+  --accent-hover: #704800;
+  --accent-foreground: #ffffff;
+  --favorite: #c92d3a;
+  --success: #1b7f4b;
+  --warning: #8a5a00;
+  --danger: #b3261e;
+  --focus-ring: #704800;
+  --overlay: rgb(32 30 25 / 0.45);
+  --skeleton: #eae6da;
+}
+
+/* Crimson Cinema / Dark */
+[data-palette="crimson"][data-mode="dark"] {
+  --background: #101114;
+  --surface: #191a1f;
+  --surface-raised: #252327;
+  --border: #3a3438;
+  --border-strong: #7c7076;
+  --text-primary: #f5f3ef;
+  --text-muted: #a7a0a4;
+  --accent: #ec5a5f;
+  --accent-hover: #f7686c;
+  --accent-foreground: #101114;
+  --favorite: #e5484d;
+  --success: #3dd68c;
+  --warning: #f5a524;
+  --danger: #ff6369;
+  --focus-ring: #f7686c;
+  --overlay: rgb(0 0 0 / 0.6);
+  --skeleton: #2c2a2e;
+}
+
+/* Crimson Cinema / Light */
+[data-palette="crimson"][data-mode="light"] {
+  --background: #f8f4f4;
+  --surface: #ffffff;
+  --surface-raised: #fff8f8;
+  --border: #e7d8da;
+  --border-strong: #887a7e;
+  --text-primary: #241a1d;
+  --text-muted: #75676b;
+  --accent: #b42332;
+  --accent-hover: #941b28;
+  --accent-foreground: #ffffff;
+  --favorite: #b42332;
+  --success: #1b7f4b;
+  --warning: #8a5a00;
+  --danger: #b3261e;
+  --focus-ring: #941b28;
+  --overlay: rgb(36 26 29 / 0.45);
+  --skeleton: #f0e3e5;
+}
