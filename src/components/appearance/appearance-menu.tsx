@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNod
 import { IconButton } from "@/components/ui/icon-button";
 import { Link, usePathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { MODES, PALETTES, type ModePreference, type Palette } from "@/lib/appearance";
+import { MODES, PALETTES, readStoredAppearance, type ModePreference, type Palette } from "@/lib/appearance";
 import {
   followSystemMode,
   getAppearanceSnapshot,
@@ -60,6 +60,18 @@ export function AppearanceMenu() {
 
   // Keep "system" mode in sync with the OS preference while the app is open.
   useEffect(() => followSystemMode({ palette, mode }), [palette, mode]);
+
+  // Re-apply persisted appearance after client-side navigation. The
+  // server-rendered <html> resets data-palette to gold on each locale
+  // switch, so sync DOM with localStorage whenever the pathname changes.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = readStoredAppearance(window.localStorage);
+    const current = parseSnapshot(getAppearanceSnapshot());
+    if (stored.palette !== current.palette || stored.mode !== current.mode) {
+      setAppearance(stored);
+    }
+  }, [pathname]);
 
   // Close on Escape (returning focus to the trigger) and on outside press.
   useEffect(() => {
