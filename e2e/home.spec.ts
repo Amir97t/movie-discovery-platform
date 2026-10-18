@@ -38,11 +38,24 @@ for (const locale of ["en", "fa"] as const) {
         expect(overflow, "no page-level horizontal overflow").toBeLessThanOrEqual(0);
 
         if (width < 768) {
-          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+          await page.evaluate(async () => {
+            document.documentElement.style.scrollBehavior = "auto";
+            for (let attempt = 0; attempt < 10; attempt++) {
+              window.scrollTo(0, document.body.scrollHeight);
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              const html = document.documentElement;
+              if (window.scrollY >= html.scrollHeight - html.clientHeight - 1) {
+                return;
+              }
+            }
+          });
           const footer = await page.locator("footer").boundingBox();
           const nav = await page.locator("nav[data-mobile-nav]").boundingBox();
           expect(footer && nav && footer.y + footer.height <= nav.y + 1, "footer not covered by bottom nav").toBe(true);
-          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.evaluate(() => {
+            document.documentElement.style.scrollBehavior = "";
+            window.scrollTo(0, 0);
+          });
         }
 
         if (SCREENSHOT_WIDTHS.has(width)) {
