@@ -1,12 +1,24 @@
 export const GENRE_KEYS = [
   "action",
+  "adventure",
   "animation",
+  "biography",
   "comedy",
+  "crime",
   "documentary",
   "drama",
+  "family",
+  "fantasy",
+  "filmNoir",
+  "history",
+  "horror",
+  "music",
   "romance",
   "scifi",
+  "sport",
   "thriller",
+  "war",
+  "western",
 ] as const;
 
 export type GenreKey = (typeof GENRE_KEYS)[number];
@@ -33,7 +45,7 @@ export interface Movie {
 
 export type CatalogState<T> =
   | { status: "success"; data: T; source: "fixture" | "api" }
-  | { status: "empty" }
+  | { status: "empty"; source: "fixture" | "api" }
   | { status: "error"; reason: string };
 
 export interface HomeCatalog {

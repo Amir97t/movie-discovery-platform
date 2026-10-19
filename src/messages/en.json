@@ -25,10 +25,12 @@
   },
   "home": {
     "heroKicker": "Featured · sample data",
+    "heroKickerApi": "Featured · from the catalog",
     "heroCta": "See tonight's picks",
-    "genresTitle": "Genres in this sample",
+    "genresTitle": "Genres in the catalog",
     "picksTitle": "Tonight's picks",
-    "picksNote": "Fictional sample titles used to review the design."
+    "picksNote": "Fictional sample titles used to review the design.",
+    "picksNoteApi": "Curated from the live movie catalog."
   },
   "movie": {
     "minutes": "{value} min",
@@ -37,17 +39,30 @@
   },
   "genres": {
     "action": "Action",
+    "adventure": "Adventure",
     "animation": "Animation",
+    "biography": "Biography",
     "comedy": "Comedy",
+    "crime": "Crime",
     "documentary": "Documentary",
     "drama": "Drama",
+    "family": "Family",
+    "fantasy": "Fantasy",
+    "filmNoir": "Film Noir",
+    "history": "History",
+    "horror": "Horror",
+    "music": "Music",
     "romance": "Romance",
     "scifi": "Sci-Fi",
-    "thriller": "Thriller"
+    "sport": "Sport",
+    "thriller": "Thriller",
+    "war": "War",
+    "western": "Western"
   },
   "states": {
     "emptyTitle": "Nothing to show yet",
     "emptyDescription": "There are no titles to display right now.",
+    "emptyDescriptionApi": "The catalog is currently empty.",
     "errorTitle": "Something went wrong",
     "errorDescription": "The catalog could not be loaded. Please try again later."
   },
@@ -57,6 +72,6 @@
     "back": "Back to home"
   },
   "footer": {
-    "note": "Design prototype. All titles, ratings and artwork are fictional placeholder content, not a real catalog."
+    "note": "Movie data from moviesapi.codingfront.dev. All ratings and artwork are sourced from the live catalog."
   }
 }

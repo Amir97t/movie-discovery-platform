@@ -101,15 +101,17 @@ export function normalizeMovie(input: unknown): Movie | null {
 
   const images = normalizeImageList(record.images);
 
+  const rawGenres = Array.isArray(record.genres)
+    ? record.genres.map(asString).filter((genre): genre is string => genre !== null)
+    : [];
+
   return {
     id,
     title,
     year: parseYear(record.released ?? record.year),
     rating: parseRating(record.imdb_rating ?? record.rating),
     runtimeMinutes: parseRuntime(record.runtime),
-    genres: Array.isArray(record.genres)
-      ? record.genres.map(asString).filter((genre): genre is string => genre !== null)
-      : [],
+    genres: mapApiGenresToKeys(rawGenres),
     synopsis: asString(record.plot),
     posterUrl: normalizeImageUrl(record.poster),
     backdropUrl: images[0] ?? null,
@@ -118,6 +120,37 @@ export function normalizeMovie(input: unknown): Movie | null {
 }
 
 /** Accepts a bare array or a documented `{ data: [...] }` response. */
+/** Maps API genre labels (e.g., "Sci-Fi", "Film-Noir") to canonical genre keys. */
+const API_GENRE_TO_KEY: Record<string, string> = {
+  Action: "action",
+  Adventure: "adventure",
+  Animation: "animation",
+  Biography: "biography",
+  Comedy: "comedy",
+  Crime: "crime",
+  Documentary: "documentary",
+  Drama: "drama",
+  Family: "family",
+  Fantasy: "fantasy",
+  "Film-Noir": "filmNoir",
+  History: "history",
+  Horror: "horror",
+  Music: "music",
+  Romance: "romance",
+  "Sci-Fi": "scifi",
+  Sport: "sport",
+  Thriller: "thriller",
+  War: "war",
+  Western: "western",
+};
+
+/** Converts API genre strings to canonical keys, filtering unknowns silently. */
+export function mapApiGenresToKeys(apiGenres: string[]): string[] {
+  return apiGenres
+    .map((g) => API_GENRE_TO_KEY[g])
+    .filter((key): key is string => key !== undefined);
+}
+
 export function normalizeMovieList(input: unknown): Movie[] {
   const list = Array.isArray(input) ? input : asRecord(input)?.data;
   if (!Array.isArray(list)) return [];

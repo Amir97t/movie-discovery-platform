@@ -20,22 +20,24 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const tg = await getTranslations({ locale, namespace: "genres" });
   const te = await getTranslations({ locale, namespace: "states" });
 
-  const catalog = getHomeCatalog(locale);
+  const catalog = await getHomeCatalog(locale);
 
   if (catalog.status !== "success") {
     const isError = catalog.status === "error";
+    const source = "source" in catalog ? catalog.source : "fixture";
     return (
       <div className="page-container">
         <EmptyState
           icon={isError ? <TriangleAlert className="size-10" /> : <SearchX className="size-10" />}
           title={isError ? te("errorTitle") : te("emptyTitle")}
-          description={isError ? te("errorDescription") : te("emptyDescription")}
+          description={isError ? te("errorDescription") : te(source === "api" ? "emptyDescriptionApi" : "emptyDescription")}
         />
       </div>
     );
   }
 
   const { featured, picks, genres } = catalog.data;
+  const source = catalog.source;
 
   // Locale-aware number formatting (Persian digits in /fa).
   const ratingFormat = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -66,13 +68,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     };
   });
 
+  // For API movies in Persian locale, don't show English synopsis as Persian prose.
+  const featuredSynopsis = locale === "fa" && source === "api" && featured.synopsis
+    ? null
+    : featured.synopsis;
+
   return (
     <div className="page-container space-y-12 pt-4 sm:pt-6">
       <MovieHero
-        kicker={t("heroKicker")}
+        kicker={t(source === "api" ? "heroKickerApi" : "heroKicker")}
         title={featured.title}
         metaText={metaFor(featured)}
-        synopsis={featured.synopsis}
+        synopsis={featuredSynopsis}
         art={featured.art}
         backdropUrl={featured.backdropUrl}
         cta={
@@ -103,7 +110,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <h2 id="picks-title" className="text-2xl font-bold text-fg">
             {t("picksTitle")}
           </h2>
-          <p className="text-sm text-muted">{t("picksNote")}</p>
+          <p className="text-sm text-muted">{t(source === "api" ? "picksNoteApi" : "picksNote")}</p>
         </div>
         <MovieGrid items={items} />
       </section>
