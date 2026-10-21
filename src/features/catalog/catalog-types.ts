@@ -41,6 +41,18 @@ export interface Movie {
   backdropUrl: string | null;
   /** Placeholder artwork gradient (fixtures only). */
   art: readonly [string, string] | null;
+  /** Director name from the API. */
+  director: string | null;
+  /** Cast/actors string from the API. */
+  actors: string | null;
+  /** Production country/countries from the API. */
+  country: string | null;
+  /** IMDb identifier. */
+  imdb_id: string | null;
+  /** IMDb rating (0–10). */
+  imdb_rating: number | null;
+  /** Official website URL. */
+  website: string | null;
 }
 
 export type CatalogState<T> =

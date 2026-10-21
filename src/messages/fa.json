@@ -28,14 +28,31 @@
     "heroKickerApi": "ویژه · از کاتالوگ",
     "heroCta": "پیشنهادهای امشب",
     "genresTitle": "ژانرهای کاتالوگ",
+    "allGenres": "همه",
     "picksTitle": "پیشنهادهای امشب",
     "picksNote": "عنوان‌های نمونه‌ی خیالی برای بررسی طراحی.",
     "picksNoteApi": "برگزیده از کاتالوگ زنده فیلم."
   },
-  "movie": {
+"movie": {
     "minutes": "{value} دقیقه",
     "ratingValue": "امتیاز {value} از ۱۰",
-    "notRated": "بدون امتیاز"
+    "notRated": "بدون امتیاز",
+    "backToHome": "بازگشت به خانه",
+    "detailPage": "جزئیات فیلم",
+    "year": "سال",
+    "runtime": "مدتفيذي",
+    "rating": "امتیاز",
+    "genres": "ژانرها",
+    "country": "کشور",
+    "director": "فیلم‌نامه‌نویس",
+    "cast": "بازیگران",
+    "synopsis": "خلاصه",
+    "identifiers": "شناسه‌ها",
+    "imdbId": "شناسه ایم‌دی‌بی",
+    "imdbRating": "امتیاز ایم‌دی‌بی",
+    "website": "وب‌سایت",
+    "errorTitle": "مشکلی پیش آمد",
+    "errorDescription": "بارگذاری کاتالوگ ممکن نشد. لطفاً بعداً دوباره تلاش کنید."
   },
   "genres": {
     "action": "اکشن",
@@ -73,5 +90,18 @@
   },
   "footer": {
     "note": "داده‌های فیلم از moviesapi.codingfront.dev. همه امتیازها و تصاویر از کاتالوگ زنده تأمین شده‌اند."
+  },
+  "discover": {
+    "title": "کشف",
+    "subtitle": "مرور کامل کاتالوگ",
+    "filterByGenre": "فیلتر بر اساس ژانر",
+    "allGenres": "همه",
+    "noResults": "فیلمی یافت نشد",
+    "backToHome": "بازگشت به خانه",
+    "moviesTitle": "فیلم‌ها",
+    "moviesNote": "{count} عنوان در دسترس",
+    "previous": "قبلی",
+    "next": "بعدی",
+    "pageInfo": "صفحه {current} از {total}"
   }
 }
