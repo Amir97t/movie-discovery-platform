@@ -1,6 +1,7 @@
 import { SearchX, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 import { MovieGrid, type MovieGridItem } from "@/components/movies/movie-grid";
 import { MovieHero } from "@/components/movies/movie-hero";
 import { buttonStyles } from "@/components/ui/button";
@@ -8,12 +9,17 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getHomeCatalog } from "@/features/catalog/catalog-service";
 import type { Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
+import { cn } from "@/lib/cn";
 
-export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function HomePage(
+  { params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ genre?: string }> },
+) {
   const { locale: rawLocale } = await params;
   const locale = resolveLocale(rawLocale);
   if (!locale) notFound();
   setRequestLocale(locale);
+
+  const { genre: selectedGenre } = await searchParams;
 
   const t = await getTranslations({ locale, namespace: "home" });
   const tm = await getTranslations({ locale, namespace: "movie" });
@@ -54,7 +60,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     return parts.join(" · ");
   };
 
-  const items: MovieGridItem[] = picks.map((movie) => {
+  // Client-side genre filtering using available catalog data.
+  const filteredPicks = selectedGenre
+    ? picks.filter((movie) => movie.genres.includes(selectedGenre))
+    : picks;
+
+  const items: MovieGridItem[] = filteredPicks.map((movie) => {
     const ratingText = movie.rating === null ? null : ratingFormat.format(movie.rating);
     return {
       id: movie.id,
@@ -65,6 +76,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       notRatedLabel: tm("notRated"),
       art: movie.art,
       posterUrl: movie.posterUrl,
+      href: `/${locale}/movies/${movie.id}`,
     };
   });
 
@@ -94,12 +106,32 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           {t("genresTitle")}
         </h2>
         <ul className="flex gap-2 overflow-x-auto pb-1">
+          <li
+            key="all"
+            className={cn(
+              "shrink-0 rounded-pill px-4 py-2 text-sm",
+              !selectedGenre
+                ? "border-border bg-accent text-accent-fg"
+                : "border-line-strong text-fg",
+            )}
+          >
+            <Link href={`/${locale}?genre=`} className="flex items-center gap-1">
+              {t("allGenres")}
+            </Link>
+          </li>
           {genres.map((genre) => (
             <li
               key={genre}
-              className="shrink-0 rounded-pill border border-line-strong px-4 py-2 text-sm text-fg"
+              className={cn(
+                "shrink-0 rounded-pill px-4 py-2 text-sm",
+                selectedGenre === genre
+                  ? "border-border bg-accent text-accent-fg"
+                  : "border-line-strong text-fg",
+              )}
             >
-              {tg(genre)}
+              <Link href={`/${locale}?genre=${genre}`} className="flex items-center gap-1">
+                {tg(genre)}
+              </Link>
             </li>
           ))}
         </ul>

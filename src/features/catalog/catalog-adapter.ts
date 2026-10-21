@@ -116,6 +116,12 @@ export function normalizeMovie(input: unknown): Movie | null {
     posterUrl: normalizeImageUrl(record.poster),
     backdropUrl: images[0] ?? null,
     art: null,
+    director: asString(record.director),
+    actors: asString(record.actors),
+    country: asString(record.country),
+    imdb_id: asString(record.imdb_id),
+    imdb_rating: parseRating(record.imdb_rating),
+    website: asString(record.website),
   };
 }
 

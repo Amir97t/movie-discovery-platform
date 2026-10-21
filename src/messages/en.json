@@ -28,6 +28,7 @@
     "heroKickerApi": "Featured · from the catalog",
     "heroCta": "See tonight's picks",
     "genresTitle": "Genres in the catalog",
+    "allGenres": "All",
     "picksTitle": "Tonight's picks",
     "picksNote": "Fictional sample titles used to review the design.",
     "picksNoteApi": "Curated from the live movie catalog."
@@ -35,7 +36,23 @@
   "movie": {
     "minutes": "{value} min",
     "ratingValue": "Rating {value} out of 10",
-    "notRated": "Not rated"
+    "notRated": "Not rated",
+    "backToHome": "Back to home",
+    "detailPage": "Movie Details",
+    "year": "Year",
+    "runtime": "Runtime",
+    "rating": "Rating",
+    "genres": "Genres",
+    "country": "Country",
+    "director": "Director",
+    "cast": "Cast",
+    "synopsis": "Synopsis",
+    "identifiers": "Identifiers",
+    "imdbId": "IMDb ID",
+    "imdbRating": "IMDb Rating",
+    "website": "Website",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "The catalog could not be loaded. Please try again later."
   },
   "genres": {
     "action": "Action",
@@ -73,5 +90,18 @@
   },
   "footer": {
     "note": "Movie data from moviesapi.codingfront.dev. All ratings and artwork are sourced from the live catalog."
+  },
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Browse the full catalog",
+    "filterByGenre": "Filter by genre",
+    "allGenres": "All",
+    "noResults": "No movies found",
+    "backToHome": "Back to home",
+    "moviesTitle": "Movies",
+    "moviesNote": "{count} titles available",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} of {total}"
   }
 }

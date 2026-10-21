@@ -10,7 +10,11 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run build && npm run start -- -p 3100",
+    command: "node tests/start-servers.mjs",
+    env: {
+      ...process.env,
+      MOVIES_API_ORIGIN: "http://localhost:9999",
+    },
     url: "http://localhost:3100/en",
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
