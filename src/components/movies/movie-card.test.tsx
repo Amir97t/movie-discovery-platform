@@ -52,9 +52,9 @@ describe("MovieCard", () => {
   });
 
   it("renders as a link when href is provided", () => {
-    render(<MovieCard {...base} ratingText="8.1" href="/en/movies/1" />);
+    render(<MovieCard {...base} ratingText="8.1" href="/movies/1" />);
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/en/movies/1");
+    expect(link).toHaveAttribute("href", "/movies/1");
   });
 
   it("renders as an article when href is not provided", () => {

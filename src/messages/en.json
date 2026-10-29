@@ -103,5 +103,21 @@
     "previous": "Previous",
     "next": "Next",
     "pageInfo": "Page {current} of {total}"
+  },
+  "library": {
+    "title": "Library",
+    "subtitle": "Your personal movie collection",
+    "comingSoonTitle": "Library is coming soon",
+    "comingSoonDescription": "We are working on bringing your personal movie library, watchlists, and favorites here.",
+    "backToHome": "Back to home",
+    "goToDiscover": "Discover movies"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Account preferences and settings",
+    "comingSoonTitle": "Profile is coming soon",
+    "comingSoonDescription": "User profiles, preferences, and personal recommendations will be available here in a future update.",
+    "backToHome": "Back to home",
+    "goToDiscover": "Discover movies"
   }
 }

@@ -1,10 +1,15 @@
-import { TriangleAlert } from "lucide-react";
+import { SearchX, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { MovieGrid, type MovieGridItem } from "@/components/movies/movie-grid";
-import { GENRE_KEY_TO_API_NAME, getMoviesByGenre, getMoviesByPage, MovieNotFoundError } from "@/features/catalog/catalog-service";
-import type { Movie } from "@/features/catalog/catalog-types";
+import {
+  GENRE_KEY_TO_API_NAME,
+  getMoviesByGenre,
+  getMoviesByPage,
+  MovieNotFoundError,
+} from "@/features/catalog/catalog-service";
+import { GENRE_KEYS, type GenreKey, type Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
 import { buttonStyles } from "@/components/ui/button";
@@ -13,8 +18,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 function parsePage(value: string | string[] | undefined): number {
   if (!value) return 1;
   const pageStr = Array.isArray(value) ? value[0] : value;
-  const page = Number(pageStr);
-  return Number.isFinite(page) && page >= 1 ? page : 1;
+  const page = parseInt(pageStr, 10);
+  return Number.isInteger(page) && page >= 1 ? page : 1;
 }
 
 export default async function DiscoverPage({
@@ -29,61 +34,42 @@ export default async function DiscoverPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
-  const { genre: selectedGenreKey, page: pageParam } = await searchParams;
+  const { genre: rawGenre, page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
+  const selectedGenreKey = typeof rawGenre === "string" && rawGenre.trim() ? rawGenre.trim() : undefined;
+  const isKnownGenre = selectedGenreKey ? (GENRE_KEYS as readonly string[]).includes(selectedGenreKey) : false;
 
   const t = await getTranslations({ locale, namespace: "discover" });
   const tm = await getTranslations({ locale, namespace: "movie" });
   const tg = await getTranslations({ locale, namespace: "genres" });
   const te = await getTranslations({ locale, namespace: "states" });
 
-  const apiGenreName = selectedGenreKey ? GENRE_KEY_TO_API_NAME[selectedGenreKey as keyof typeof GENRE_KEY_TO_API_NAME] : undefined;
+  let result:
+    | {
+        movies: Movie[];
+        metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+      }
+    | undefined;
+  let fetchError: Error | null = null;
+  let isGenreUnavailable = false;
 
-  let result: { movies: Movie[]; metadata: { current_page: string; per_page: string; page_count: string; total_count: string } } | undefined;
-  let error: Error | null = null;
-
-  try {
-    if (apiGenreName) {
-      result = await getMoviesByGenre(apiGenreName, page);
-    } else {
-      result = await getMoviesByPage(page);
+  if (selectedGenreKey && !isKnownGenre) {
+    isGenreUnavailable = true;
+  } else {
+    try {
+      if (selectedGenreKey && isKnownGenre) {
+        const apiGenreName = GENRE_KEY_TO_API_NAME[selectedGenreKey as GenreKey];
+        result = await getMoviesByGenre(apiGenreName, page);
+      } else {
+        result = await getMoviesByPage(page);
+      }
+    } catch (err) {
+      if (err instanceof MovieNotFoundError) {
+        isGenreUnavailable = true;
+      } else {
+        fetchError = err as Error;
+      }
     }
-  } catch (err) {
-    if (err instanceof MovieNotFoundError) {
-      notFound();
-    }
-    error = err as Error;
-  }
-
-  if (error) {
-    return (
-      <div className="page-container">
-        <EmptyState
-          icon={<TriangleAlert className="size-10" />}
-          title={te("errorTitle")}
-          description={te("errorDescription")}
-          action={
-            <Link href={`/${locale}/discover`} className={buttonStyles({ size: "md" })}>
-              ← {t("backToHome")}
-            </Link>
-          }
-        />
-      </div>
-    );
-  }
-
-  if (!result || result.movies.length === 0) {
-    return (
-      <div className="page-container space-y-12 pt-4 sm:pt-6">
-        <section className="space-y-6">
-          <h1 className="text-2xl font-bold text-fg">{t("title")}</h1>
-          <p className="text-muted">{t("noResults")}</p>
-          <Link href={`/${locale}/discover`} className={cn("inline-flex items-center", "text-accent hover:underline")}>
-            ← {t("backToHome")}
-          </Link>
-        </section>
-      </div>
-    );
   }
 
   // Locale-aware number formatting (Persian digits in /fa).
@@ -100,20 +86,23 @@ export default async function DiscoverPage({
     return parts.join(" · ");
   };
 
-  // Collect all genres present in the results for the filter chips.
-  const presentGenres = new Set<string>();
-  result.movies.forEach((movie) => {
-    movie.genres.forEach((g) => presentGenres.add(g));
-  });
+  const buildPageUrl = (targetPage: number) => {
+    const sp = new URLSearchParams();
+    if (selectedGenreKey) sp.set("genre", selectedGenreKey);
+    sp.set("page", String(targetPage));
+    return `/discover?${sp.toString()}`;
+  };
 
-  const totalCount = Number(result.metadata.total_count);
-  const perPage = Number(result.metadata.per_page);
-  const totalPages = Math.ceil(totalCount / perPage) || 1;
+  const totalCount = result ? Number(result.metadata.total_count) : 0;
+  const perPage = result ? Number(result.metadata.per_page) || 12 : 12;
+  const totalPages = result
+    ? Number(result.metadata.page_count) || Math.ceil(totalCount / perPage) || 1
+    : 1;
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
 
-  const items: MovieGridItem[] = result.movies.map((movie) => {
-    return {
+  const items: MovieGridItem[] =
+    result?.movies.map((movie) => ({
       id: movie.id,
       title: movie.title,
       metaText: metaFor(movie),
@@ -122,19 +111,21 @@ export default async function DiscoverPage({
       notRatedLabel: tm("notRated"),
       art: movie.art,
       posterUrl: movie.posterUrl,
-      href: `/${locale}/movies/${movie.id}`,
-    };
-  });
+      href: `/movies/${movie.id}`,
+    })) ?? [];
 
   return (
-    <div className="page-container space-y-12 pt-4 sm:pt-6">
-      <section className="space-y-4">
-        <h1 className="text-2xl font-bold text-fg">{t("title")}</h1>
-        <p className="text-muted">{t("subtitle")}</p>
+    <div className="page-container space-y-8 pt-4 sm:pt-6">
+      <section className="space-y-2">
+        <h1 className="text-2xl font-bold text-fg sm:text-3xl">{t("title")}</h1>
+        <p className="text-sm text-muted">{t("subtitle")}</p>
       </section>
 
+      {/* Stable Genre Chips Bar */}
       <section aria-labelledby="discover-genres-title" className="space-y-3">
-        <h2 id="discover-genres-title" className="sr-only">{t("filterByGenre")}</h2>
+        <h2 id="discover-genres-title" className="sr-only">
+          {t("filterByGenre")}
+        </h2>
         <ul className="flex gap-2 overflow-x-auto pb-1">
           <li
             key="all"
@@ -142,26 +133,28 @@ export default async function DiscoverPage({
               "shrink-0 rounded-pill px-4 py-2 text-sm",
               !selectedGenreKey
                 ? "border-border bg-accent text-accent-fg"
-                : "border-line-strong text-fg",
+                : "border border-line-strong text-fg hover:border-fg/50",
             )}
           >
             <Link href="/discover?page=1" className="flex items-center gap-1">
               {t("allGenres")}
             </Link>
           </li>
-          {[...Object.entries(GENRE_KEY_TO_API_NAME)].sort(([a], [b]) => a.localeCompare(b)).map(([key]) => {
-            // Only show genre chips for genres that appear in results
-            if (!presentGenres.has(key)) return null;
+          {GENRE_KEYS.map((key) => {
+            const isSelected = selectedGenreKey === key;
             return (
-              <li key={key} className="shrink-0 rounded-pill px-4 py-2 text-sm">
+              <li
+                key={key}
+                className={cn(
+                  "shrink-0 rounded-pill px-4 py-2 text-sm",
+                  isSelected
+                    ? "border-border bg-accent text-accent-fg"
+                    : "border border-line-strong text-fg hover:border-fg/50",
+                )}
+              >
                 <Link
                   href={`/discover?genre=${key}&page=1`}
-                  className={cn(
-                    "flex items-center gap-1",
-                    selectedGenreKey === key
-                      ? "border-border bg-accent text-accent-fg"
-                      : "border-line-strong text-fg",
-                  )}
+                  className="flex items-center gap-1"
                 >
                   {tg(key)}
                 </Link>
@@ -171,38 +164,67 @@ export default async function DiscoverPage({
         </ul>
       </section>
 
-      <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-4">
-        <div className="space-y-1">
-          <h2 id="discover-picks-title" className="text-2xl font-bold text-fg">
-            {t("moviesTitle")}
-          </h2>
-          <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
-        </div>
-        <MovieGrid items={items} />
+      {/* Content Area */}
+      {fetchError ? (
+        <EmptyState
+          icon={<TriangleAlert className="size-10" />}
+          title={te("errorTitle")}
+          description={te("errorDescription")}
+          action={
+            <Link href="/discover?page=1" className={buttonStyles({ size: "md" })}>
+              ← {t("backToHome")}
+            </Link>
+          }
+        />
+      ) : isGenreUnavailable || items.length === 0 ? (
+        <EmptyState
+          icon={<SearchX className="size-10" />}
+          title={te("emptyTitle")}
+          description={t("noResults")}
+          action={
+            <Link href="/discover?page=1" className={buttonStyles({ size: "md", variant: "ghost" })}>
+              ← {t("allGenres")}
+            </Link>
+          }
+        />
+      ) : (
+        <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-4">
+          <div className="space-y-1">
+            <h2 id="discover-picks-title" className="text-2xl font-bold text-fg">
+              {t("moviesTitle")}
+            </h2>
+            <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
+          </div>
+          <MovieGrid items={items} />
 
-        {/* Pagination */}
-        <nav className="flex justify-between items-center mt-8">
-          {hasPrev ? (
-            <Link
-              href={`/discover${selectedGenreKey ? `?genre=${selectedGenreKey}` : ""}&page=${page - 1}`}
-              className={buttonStyles({ size: "md", variant: "ghost" })}
-            >
-              ← {t("previous")}
-            </Link>
-          ) : null}
-          <span className="text-sm text-muted">
-            {t("pageInfo", { current: page, total: totalPages })}
-          </span>
-          {hasNext ? (
-            <Link
-              href={`/discover${selectedGenreKey ? `?genre=${selectedGenreKey}` : ""}&page=${page + 1}`}
-              className={buttonStyles({ size: "md", variant: "ghost" })}
-            >
-              {t("next")} →
-            </Link>
-          ) : null}
-        </nav>
-      </section>
+          {/* Pagination */}
+          <nav className="flex justify-between items-center mt-8">
+            {hasPrev ? (
+              <Link
+                href={buildPageUrl(page - 1)}
+                className={buttonStyles({ size: "md", variant: "ghost" })}
+              >
+                ← {t("previous")}
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="text-sm text-muted">
+              {t("pageInfo", { current: page, total: totalPages })}
+            </span>
+            {hasNext ? (
+              <Link
+                href={buildPageUrl(page + 1)}
+                className={buttonStyles({ size: "md", variant: "ghost" })}
+              >
+                {t("next")} →
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        </section>
+      )}
     </div>
   );
 }

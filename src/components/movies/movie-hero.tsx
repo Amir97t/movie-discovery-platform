@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/ui/brand-mark";
+import { cn } from "@/lib/cn";
 
 export interface MovieHeroProps {
   kicker: string;
@@ -18,9 +21,14 @@ export interface MovieHeroProps {
  * does not depend on the active theme or the artwork.
  */
 export function MovieHero({ kicker, title, metaText, synopsis, art, backdropUrl = null, cta }: MovieHeroProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
   const style = art
     ? { backgroundImage: `linear-gradient(135deg, ${art[0]} 0%, ${art[1]} 100%)` }
     : undefined;
+
+  const showImage = Boolean(backdropUrl) && !hasError;
 
   return (
     <section
@@ -28,16 +36,29 @@ export function MovieHero({ kicker, title, metaText, synopsis, art, backdropUrl 
       className="relative isolate h-[19rem] overflow-hidden rounded-card bg-skeleton sm:h-[22rem] lg:h-[28rem]"
       style={style}
     >
-      {backdropUrl ? (
+      {/* Loading placeholder skeleton */}
+      {showImage && !isLoaded && (
+        <div
+          data-testid="hero-backdrop-skeleton"
+          className="absolute inset-0 -z-10 animate-pulse bg-line/20"
+        />
+      )}
+
+      {showImage && (
         <Image
-          src={backdropUrl}
+          src={backdropUrl!}
           alt=""
           fill
-          preload
+          priority
           sizes="100vw"
-          className="-z-10 object-cover"
+          className={cn(
+            "-z-10 object-cover transition-opacity duration-300",
+            isLoaded ? "opacity-100" : "opacity-0",
+          )}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
         />
-      ) : null}
+      )}
       <BrandMark className="absolute -end-6 -top-6 -z-10 size-64 text-on-art/10 lg:size-96" />
       <div
         aria-hidden="true"

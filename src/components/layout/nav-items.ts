@@ -11,6 +11,6 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: "home", href: "/", icon: House, available: true },
   { key: "discover", href: "/discover", icon: Compass, available: true },
-  { key: "library", href: "/library", icon: LibraryBig, available: false },
-  { key: "profile", href: "/profile", icon: UserRound, available: false },
+  { key: "library", href: "/library", icon: LibraryBig, available: true },
+  { key: "profile", href: "/profile", icon: UserRound, available: true },
 ];

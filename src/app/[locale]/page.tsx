@@ -7,19 +7,19 @@ import { MovieHero } from "@/components/movies/movie-hero";
 import { buttonStyles } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getHomeCatalog } from "@/features/catalog/catalog-service";
-import type { Movie } from "@/features/catalog/catalog-types";
+import { GENRE_KEYS, type Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
 
-export default async function HomePage(
-  { params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ genre?: string }> },
-) {
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const { locale: rawLocale } = await params;
   const locale = resolveLocale(rawLocale);
   if (!locale) notFound();
   setRequestLocale(locale);
-
-  const { genre: selectedGenre } = await searchParams;
 
   const t = await getTranslations({ locale, namespace: "home" });
   const tm = await getTranslations({ locale, namespace: "movie" });
@@ -42,7 +42,7 @@ export default async function HomePage(
     );
   }
 
-  const { featured, picks, genres } = catalog.data;
+  const { featured, picks } = catalog.data;
   const source = catalog.source;
 
   // Locale-aware number formatting (Persian digits in /fa).
@@ -60,12 +60,7 @@ export default async function HomePage(
     return parts.join(" · ");
   };
 
-  // Client-side genre filtering using available catalog data.
-  const filteredPicks = selectedGenre
-    ? picks.filter((movie) => movie.genres.includes(selectedGenre))
-    : picks;
-
-  const items: MovieGridItem[] = filteredPicks.map((movie) => {
+  const items: MovieGridItem[] = picks.map((movie) => {
     const ratingText = movie.rating === null ? null : ratingFormat.format(movie.rating);
     return {
       id: movie.id,
@@ -76,7 +71,7 @@ export default async function HomePage(
       notRatedLabel: tm("notRated"),
       art: movie.art,
       posterUrl: movie.posterUrl,
-      href: `/${locale}/movies/${movie.id}`,
+      href: `/movies/${movie.id}`,
     };
   });
 
@@ -110,26 +105,22 @@ export default async function HomePage(
             key="all"
             className={cn(
               "shrink-0 rounded-pill px-4 py-2 text-sm",
-              !selectedGenre
-                ? "border-border bg-accent text-accent-fg"
-                : "border-line-strong text-fg",
+              "border border-line-strong text-fg hover:border-fg/50",
             )}
           >
-            <Link href={`/${locale}?genre=`} className="flex items-center gap-1">
+            <Link href="/discover?page=1" className="flex items-center gap-1">
               {t("allGenres")}
             </Link>
           </li>
-          {genres.map((genre) => (
+          {GENRE_KEYS.map((genre) => (
             <li
               key={genre}
               className={cn(
                 "shrink-0 rounded-pill px-4 py-2 text-sm",
-                selectedGenre === genre
-                  ? "border-border bg-accent text-accent-fg"
-                  : "border-line-strong text-fg",
+                "border border-line-strong text-fg hover:border-fg/50",
               )}
             >
-              <Link href={`/${locale}?genre=${genre}`} className="flex items-center gap-1">
+              <Link href={`/discover?genre=${genre}&page=1`} className="flex items-center gap-1">
                 {tg(genre)}
               </Link>
             </li>

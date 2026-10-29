@@ -15,13 +15,13 @@ function generateMovie(id, title, genre) {
   return {
     id: String(id),
     title: title,
-    poster: `https://via.placeholder.com/300x450?text=${encodeURIComponent(title)}`,
+    poster: `https://moviesapi.codingfront.dev/images/tt${id}.jpg`,
     imdb_rating: "8.0",
     released: "2020-01-01",
     runtime: "120 min",
     genres: [genre],
     plot: `Plot for ${title}`,
-    images: [`https://via.placeholder.com/1920x1080?text=${encodeURIComponent(title)}+Backdrop`],
+    images: [`https://moviesapi.codingfront.dev/images/tt${id}_backdrop.jpg`],
     director: "Director",
     actors: "Actor 1, Actor 2",
     country: "United States",
@@ -33,6 +33,12 @@ function generateMovie(id, title, genre) {
 // Canonical movie records used across all mock responses.
 const MOVIE_1 = generateMovie(1, "The Shawshank Redemption", "Drama");
 const MOVIE_250 = generateMovie(250, "Movie 250", "Drama");
+
+const ALL_MOVIES = Array.from({ length: 25 }, (_, i) => {
+  if (i === 0) return MOVIE_1;
+  if (i === 24) return MOVIE_250;
+  return generateMovie(i + 1, `Movie ${i + 1}`, i % 2 === 0 ? "Drama" : "Action");
+});
 
 // Sci-Fi movies: 13 total, so page 1 (per_page=12) has 12, page 2 has 1
 const SCI_FI_MOVIES = [
@@ -89,16 +95,15 @@ function createServer() {
     const moviesListMatch = url.pathname.match(/^\/api\/v1\/movies$/);
     if (moviesListMatch && req.method === "GET") {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
-      const allMovies = [MOVIE_1, MOVIE_250];
       const start = (page - 1) * 12;
-      const pageMovies = allMovies.slice(start, start + 12);
+      const pageMovies = ALL_MOVIES.slice(start, start + 12);
       jsonResponse(res, 200, {
         data: pageMovies,
         metadata: {
           current_page: String(page),
           per_page: "12",
-          page_count: "21",
-          total_count: "250",
+          page_count: String(Math.ceil(ALL_MOVIES.length / 12)),
+          total_count: String(ALL_MOVIES.length),
         },
       });
       return;
@@ -114,6 +119,11 @@ function createServer() {
       }
       if (id === "500") {
         jsonResponse(res, 500, { error: "Internal server error" });
+        return;
+      }
+      const found = ALL_MOVIES.find((m) => m.id === id);
+      if (found) {
+        jsonResponse(res, 200, found);
         return;
       }
       if (id === "1") {

@@ -5,8 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { getMovieByIdDirect, MovieNotFoundError } from "@/features/catalog/catalog-service";
 import { resolveLocale } from "@/i18n/routing";
 import { buttonStyles } from "@/components/ui/button";
-import { cn } from "@/lib/cn";
-import Image from "next/image";
+import { MovieBackdrop } from "@/components/movies/movie-backdrop";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function MovieDetailPage({
@@ -36,7 +35,7 @@ export default async function MovieDetailPage({
           title={t("errorTitle")}
           description={t("errorDescription")}
           action={
-            <Link href={`/${locale}`} className={buttonStyles({ size: "md" })}>
+            <Link href="/" className={buttonStyles({ size: "md" })}>
               ← {t("backToHome")}
             </Link>
           }
@@ -45,42 +44,24 @@ export default async function MovieDetailPage({
     );
   }
 
-  const hasBackdrop = movie.backdropUrl !== null;
-
   return (
     <div className="page-container space-y-8 pt-4 sm:pt-6">
       <nav className="flex gap-2 mb-2">
-        <Link href={`/${locale}`} className={buttonStyles({ size: "md" })}>
+        <Link href="/" className={buttonStyles({ size: "md" })}>
           ← {t("backToHome")}
         </Link>
       </nav>
 
       <article className="space-y-6">
-        <section
-          className={cn(
-            "relative isolate overflow-hidden rounded-card bg-skeleton",
-            hasBackdrop ? "h-[20rem] sm:h-[26rem]" : "h-[12rem] sm:h-[16rem]",
-          )}
-        >
-          {hasBackdrop && movie.backdropUrl ? (
-            <Image
-              src={movie.backdropUrl}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 40vw"
-              className="object-cover"
-            />
-          ) : null}
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[var(--scrim)] via-transparent to-transparent" />
-          <div className="absolute inset-0 p-6 flex flex-col justify-end">
+        <MovieBackdrop
+          backdropUrl={movie.backdropUrl}
+          title={movie.title}
+          badge={
             <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium text-accent-fg bg-accent">
               {t("detailPage")}
             </span>
-            <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl text-fg">
-              {movie.title}
-            </h1>
-          </div>
-        </section>
+          }
+        />
 
         <dl className="grid grid-cols-2 gap-4 sm:gap-6 text-sm">
           {movie.year !== null && (
