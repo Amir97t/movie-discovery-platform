@@ -64,7 +64,7 @@ export function AppearanceMenu() {
   useEffect(() => followSystemMode({ palette, mode }), [palette, mode]);
 
   // Re-apply persisted appearance after client-side navigation. The
-  // server-rendered <html> resets data-palette to gold on each locale
+  // server-rendered <html> resets data-palette to blue on each locale
   // switch, so sync DOM with localStorage whenever the pathname changes.
   useEffect(() => {
     if (typeof window === "undefined") return;

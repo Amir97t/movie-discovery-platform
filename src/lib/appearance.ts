@@ -62,10 +62,26 @@ export function resolveMode(mode: ModePreference, prefersDark: boolean): Resolve
 }
 
 export function readStoredAppearance(
-  storage: Pick<Storage, "getItem"> | null | undefined,
+  storage: Pick<Storage, "getItem" | "setItem"> | null | undefined,
 ): Appearance {
   try {
-    return parseAppearance(storage?.getItem(APPEARANCE_STORAGE_KEY));
+    const raw = storage?.getItem(APPEARANCE_STORAGE_KEY);
+    const parsed = parseAppearance(raw);
+    if (raw && storage && "setItem" in storage && typeof storage.setItem === "function") {
+      try {
+        const data: unknown = JSON.parse(raw);
+        if (
+          data &&
+          typeof data === "object" &&
+          (data as Record<string, unknown>).palette === "gold"
+        ) {
+          writeStoredAppearance(storage, parsed);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+    return parsed;
   } catch {
     return { ...DEFAULT_APPEARANCE };
   }

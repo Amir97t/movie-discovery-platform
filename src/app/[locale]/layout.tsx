@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { LiquidGlassFilter } from "@/components/ui/liquid-glass-filter";
 import { getDirection, resolveLocale, routing } from "@/i18n/routing";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "@/styles/globals.css";
@@ -74,7 +73,6 @@ export default async function LocaleLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-dvh bg-background pb-[calc(4rem_+_env(safe-area-inset-bottom))] text-fg antialiased md:pb-0">
-        <LiquidGlassFilter />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <a
             href="#main"

@@ -71,6 +71,19 @@ describe("storage helpers", () => {
     expect(writeStoredAppearance(broken, DEFAULT_APPEARANCE)).toBe(false);
     expect(writeStoredAppearance(null, DEFAULT_APPEARANCE)).toBe(false);
   });
+
+  it("migrates legacy gold palette in storage to canonical blue", () => {
+    let saved: string | null = null;
+    const storage = {
+      getItem: () => '{"palette":"gold","mode":"light"}',
+      setItem: (_k: string, v: string) => {
+        saved = v;
+      },
+    };
+    const appearance = readStoredAppearance(storage);
+    expect(appearance).toEqual({ palette: "blue", mode: "light" });
+    expect(saved).toBe(JSON.stringify({ palette: "blue", mode: "light" }));
+  });
 });
 
 describe("applyAppearance", () => {
@@ -122,5 +135,26 @@ describe("pre-paint script parity", () => {
         });
       }
     }
+  });
+
+  it("migrates legacy gold palette in storage to blue during pre-paint script execution", () => {
+    let saved: string | null = null;
+    const root = document.createElement("html");
+    const fakeDocument = { documentElement: root };
+    const fakeStorage = {
+      getItem: () => '{"palette":"gold","mode":"system"}',
+      setItem: (_k: string, v: string) => {
+        saved = v;
+      },
+    };
+    const fakeWindow = { matchMedia: () => ({ matches: true }) };
+    new Function("document", "localStorage", "window", THEME_INIT_SCRIPT)(
+      fakeDocument,
+      fakeStorage,
+      fakeWindow,
+    );
+    expect(root.dataset.palette).toBe("blue");
+    expect(root.dataset.modePref).toBe("system");
+    expect(saved).toBe(JSON.stringify({ palette: "blue", mode: "system" }));
   });
 });

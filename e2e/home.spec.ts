@@ -110,3 +110,39 @@ test("Escape closes the appearance menu and returns focus to its trigger", async
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();
 });
+
+test("migrates legacy gold palette in localStorage to canonical blue while preserving saved mode", async ({ page }) => {
+  // 1. Seed localStorage with legacy 'gold' palette and explicit 'light' mode
+  await page.addInitScript(() => {
+    localStorage.setItem("frame-appearance", JSON.stringify({ palette: "gold", mode: "light" }));
+  });
+  await page.goto("/en");
+
+  // 2. Verify rendered theme on <html> is blue and light without hydration error
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-palette", "blue");
+  await expect(html).toHaveAttribute("data-mode", "light");
+  await expect(html).toHaveAttribute("data-mode-pref", "light");
+
+  // 3. Confirm storage is canonicalized to blue while preserving mode: 'light'
+  const stored = await page.evaluate(() => localStorage.getItem("frame-appearance"));
+  expect(stored).not.toBeNull();
+  const parsed = JSON.parse(stored!);
+  expect(parsed).toEqual({ palette: "blue", mode: "light" });
+});
+
+test("migrates legacy gold palette with system mode to blue and preserves system mode preference", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("frame-appearance", JSON.stringify({ palette: "gold", mode: "system" }));
+  });
+  await page.goto("/en");
+
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-palette", "blue");
+  await expect(html).toHaveAttribute("data-mode-pref", "system");
+
+  const stored = await page.evaluate(() => localStorage.getItem("frame-appearance"));
+  expect(stored).not.toBeNull();
+  const parsed = JSON.parse(stored!);
+  expect(parsed).toEqual({ palette: "blue", mode: "system" });
+});
