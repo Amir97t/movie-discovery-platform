@@ -114,47 +114,47 @@ export default async function DiscoverPage({
       href: `/movies/${movie.id}`,
     })) ?? [];
 
+  const chipBase =
+    "inline-flex min-h-10 items-center gap-1.5 rounded-pill px-4 py-2 text-sm font-medium transition-all duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
   return (
-    <div className="page-container space-y-8 pt-4 sm:pt-6">
+    <div className="page-container space-y-10 pb-16 pt-4 sm:pt-6">
       <section className="space-y-2">
-        <h1 className="text-2xl font-bold text-fg sm:text-3xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">{t("title")}</h1>
+        <p className="text-base text-muted max-w-2xl">{t("subtitle")}</p>
       </section>
 
       {/* Stable Genre Chips Bar */}
-      <section aria-labelledby="discover-genres-title" className="space-y-3">
+      <section aria-labelledby="discover-genres-title" className="space-y-4">
         <h2 id="discover-genres-title" className="sr-only">
           {t("filterByGenre")}
         </h2>
-        <ul className="flex gap-2 overflow-x-auto pb-1">
-          <li
-            key="all"
-            className={cn(
-              "shrink-0 rounded-pill px-4 py-2 text-sm",
-              !selectedGenreKey
-                ? "border-border bg-accent text-accent-fg"
-                : "border border-line-strong text-fg hover:border-fg/50",
-            )}
-          >
-            <Link href="/discover?page=1" className="flex items-center gap-1">
+        <ul className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <li key="all" className="shrink-0">
+            <Link
+              href="/discover?page=1"
+              className={cn(
+                chipBase,
+                !selectedGenreKey
+                  ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(77,163,255,0.3)]"
+                  : "border border-line-strong/40 bg-surface/50 text-muted hover:border-accent/40 hover:bg-surface hover:text-fg",
+              )}
+            >
               {t("allGenres")}
             </Link>
           </li>
           {GENRE_KEYS.map((key) => {
             const isSelected = selectedGenreKey === key;
             return (
-              <li
-                key={key}
-                className={cn(
-                  "shrink-0 rounded-pill px-4 py-2 text-sm",
-                  isSelected
-                    ? "border-border bg-accent text-accent-fg"
-                    : "border border-line-strong text-fg hover:border-fg/50",
-                )}
-              >
+              <li key={key} className="shrink-0">
                 <Link
                   href={`/discover?genre=${key}&page=1`}
-                  className="flex items-center gap-1"
+                  className={cn(
+                    chipBase,
+                    isSelected
+                      ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(77,163,255,0.3)]"
+                      : "border border-line-strong/40 bg-surface/50 text-muted hover:border-accent/40 hover:bg-surface hover:text-fg",
+                  )}
                 >
                   {tg(key)}
                 </Link>
@@ -182,15 +182,15 @@ export default async function DiscoverPage({
           title={te("emptyTitle")}
           description={t("noResults")}
           action={
-            <Link href="/discover?page=1" className={buttonStyles({ size: "md", variant: "ghost" })}>
+            <Link href="/discover?page=1" className={buttonStyles({ size: "md", variant: "secondary" })}>
               ← {t("allGenres")}
             </Link>
           }
         />
       ) : (
-        <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-4">
+        <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-6">
           <div className="space-y-1">
-            <h2 id="discover-picks-title" className="text-2xl font-bold text-fg">
+            <h2 id="discover-picks-title" className="text-2xl font-bold tracking-tight text-fg">
               {t("moviesTitle")}
             </h2>
             <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
@@ -198,24 +198,24 @@ export default async function DiscoverPage({
           <MovieGrid items={items} />
 
           {/* Pagination */}
-          <nav className="flex justify-between items-center mt-8">
+          <nav aria-label="Pagination" className="flex justify-between items-center pt-8 border-t border-white/[0.08]">
             {hasPrev ? (
               <Link
                 href={buildPageUrl(page - 1)}
-                className={buttonStyles({ size: "md", variant: "ghost" })}
+                className={buttonStyles({ size: "md", variant: "secondary" })}
               >
                 ← {t("previous")}
               </Link>
             ) : (
               <span />
             )}
-            <span className="text-sm text-muted">
+            <span className="text-sm font-medium text-muted">
               {t("pageInfo", { current: page, total: totalPages })}
             </span>
             {hasNext ? (
               <Link
                 href={buildPageUrl(page + 1)}
-                className={buttonStyles({ size: "md", variant: "ghost" })}
+                className={buttonStyles({ size: "md", variant: "secondary" })}
               >
                 {t("next")} →
               </Link>

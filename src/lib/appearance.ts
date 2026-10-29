@@ -6,7 +6,7 @@
 
 export const APPEARANCE_STORAGE_KEY = "frame-appearance";
 
-export const PALETTES = ["gold", "crimson"] as const;
+export const PALETTES = ["blue", "crimson"] as const;
 export const MODES = ["light", "dark", "system"] as const;
 
 export type Palette = (typeof PALETTES)[number];
@@ -18,7 +18,7 @@ export interface Appearance {
   mode: ModePreference;
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { palette: "gold", mode: "system" };
+export const DEFAULT_APPEARANCE: Appearance = { palette: "blue", mode: "dark" };
 
 export function isPalette(value: unknown): value is Palette {
   return typeof value === "string" && (PALETTES as readonly string[]).includes(value);
@@ -28,15 +28,21 @@ export function isModePreference(value: unknown): value is ModePreference {
   return typeof value === "string" && (MODES as readonly string[]).includes(value);
 }
 
-/** Never throws: corrupt or partial storage falls back to defaults per field. */
+/** Never throws: corrupt or partial storage falls back to defaults per field. Migrates 'gold' to 'blue'. */
 export function parseAppearance(raw: string | null | undefined): Appearance {
   if (!raw) return { ...DEFAULT_APPEARANCE };
   try {
     const data: unknown = JSON.parse(raw);
     if (data && typeof data === "object") {
       const record = data as Record<string, unknown>;
+      let palette: Palette = DEFAULT_APPEARANCE.palette;
+      if (record.palette === "crimson") {
+        palette = "crimson";
+      } else if (record.palette === "blue" || record.palette === "gold") {
+        palette = "blue";
+      }
       return {
-        palette: isPalette(record.palette) ? record.palette : DEFAULT_APPEARANCE.palette,
+        palette,
         mode: isModePreference(record.mode) ? record.mode : DEFAULT_APPEARANCE.mode,
       };
     }

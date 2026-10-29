@@ -20,7 +20,7 @@
     "language": "Language",
     "palette": "Palette",
     "mode": "Mode",
-    "palettes": { "gold": "Gold", "crimson": "Crimson" },
+    "palettes": { "blue": "Midnight Blue", "crimson": "Crimson" },
     "modes": { "light": "Light", "dark": "Dark", "system": "System" }
   },
   "home": {

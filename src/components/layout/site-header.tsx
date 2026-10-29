@@ -8,15 +8,15 @@ export async function SiteHeader() {
   const t = await getTranslations("a11y");
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-background">
+    <header className="liquid-glass sticky top-0 z-30 border-b border-white/[0.08] transition-colors">
       <div className="page-container flex h-14 items-center justify-between gap-4 md:h-16">
         <Link
           href="/"
           aria-label={t("brandHome")}
-          className="flex min-h-11 items-center gap-2 rounded-pill text-fg"
+          className="flex min-h-11 items-center gap-2 rounded-pill text-fg transition-opacity hover:opacity-90"
         >
-          <BrandMark className="size-7 text-accent" />
-          <span className="text-lg font-bold">FRAME</span>
+          <BrandMark className="size-7 text-accent drop-shadow-[0_0_8px_rgba(77,163,255,0.35)]" />
+          <span className="text-lg font-extrabold tracking-wider">FRAME</span>
         </Link>
         <DesktopNav />
         <AppearanceMenu />

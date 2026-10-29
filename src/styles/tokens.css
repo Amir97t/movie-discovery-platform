@@ -1,22 +1,25 @@
 /*
  * Design tokens. One shared system: components only ever read these
  * variables; palette and mode change the values, never the component code.
- * DOM contract: <html data-palette="gold|crimson" data-mode="light|dark">.
+ * DOM contract: <html data-palette="blue|crimson" data-mode="light|dark">.
  *
- * Starting values come from docs/DESIGN_SYSTEM_AND_RESPONSIVE_PLAN.md.
- * Documented adjustments (verified with WCAG contrast calculations, see
- * docs/IMPLEMENTATION_NOTES.md and src/styles/tokens.test.ts):
- *  - crimson/dark: --accent #E5484D -> #EC5A5F and --accent-foreground
- *    #FFFFFF -> #101114 (white on #E5484D was 3.91:1).
- *  - new --border-strong token for control outlines (3:1 non-text contrast).
+ * Color palette foundation (Cinematic Movie Discovery):
+ *  - Cinematic black: #040305
+ *  - Muted burgundy: #4F393C
+ *  - Deep navy: #0F2756
+ *  - Blue accent: #2060AC / accessible tint #4DA3FF
+ *  - Warm white: #F9F9F8
+ *  - Warm red: #A6392C
+ *  - Muted olive: #9C9A65
+ *  - Soft taupe: #B3ACA7 / accessible tint #A2ADC2
  */
 
 :root {
   /* Theme-independent */
-  --swatch-gold: #f2b544;
+  --swatch-blue: #3b8eed;
   --swatch-crimson: #ec5a5f;
-  --on-art: #f7f4ec; /* text drawn over artwork + scrim */
-  --scrim: rgb(8 8 10 / 0.72);
+  --on-art: #f9f9f8; /* text drawn over artwork + scrim */
+  --scrim: rgb(4 3 5 / 0.82);
 
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
@@ -25,70 +28,89 @@
   --duration-base: 200ms;
   --duration-panel: 240ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Apple Liquid Glass parameters */
+  --glass-blur: 16px;
+  --glass-saturate: 180%;
 }
 
-/* Noir Gold / Dark (also the no-attribute fallback) */
+/* Midnight Blue Cinematic / Dark (also the no-attribute fallback) */
 :root,
-[data-palette="gold"][data-mode="dark"] {
-  --background: #101114;
-  --surface: #191a1f;
-  --surface-raised: #242429;
-  --border: #34353c;
-  --border-strong: #74757e;
-  --text-primary: #f5f3ef;
-  --text-muted: #a3a3aa;
-  --accent: #f2b544;
-  --accent-hover: #ffd36e;
-  --accent-foreground: #17130a;
-  --favorite: #e5484d;
+[data-palette="blue"][data-mode="dark"] {
+  --background: #040305;
+  --surface: #0c1322;
+  --surface-raised: #151f38;
+  --border: #1c2744;
+  --border-strong: #6275a3;
+  --text-primary: #f9f9f8;
+  --text-muted: #a2adc2;
+  --accent: #4da3ff;
+  --accent-hover: #75b7ff;
+  --accent-foreground: #040305;
+  --favorite: #ff5c5c;
   --success: #3dd68c;
   --warning: #f5a524;
   --danger: #ff6369;
-  --focus-ring: #ffd36e;
-  --overlay: rgb(0 0 0 / 0.6);
-  --skeleton: #2a2b31;
+  --focus-ring: #75b7ff;
+  --overlay: rgb(4 3 5 / 0.75);
+  --skeleton: #131c31;
+
+  --glass-bg: rgb(12 19 34 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --glass-border-top: rgb(255 255 255 / 0.16);
+  --glass-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
 }
 
-/* Noir Gold / Light */
-[data-palette="gold"][data-mode="light"] {
-  --background: #f7f5ef;
+/* Midnight Blue / Light */
+[data-palette="blue"][data-mode="light"] {
+  --background: #f4f6fb;
   --surface: #ffffff;
-  --surface-raised: #fffdf8;
-  --border: #e4e0d6;
-  --border-strong: #86827a;
-  --text-primary: #201e19;
-  --text-muted: #6c6a63;
-  --accent: #885600;
-  --accent-hover: #704800;
+  --surface-raised: #eaf0f9;
+  --border: #d4dde8;
+  --border-strong: #63748e;
+  --text-primary: #08101e;
+  --text-muted: #4b5971;
+  --accent: #1654a6;
+  --accent-hover: #0e3e7f;
   --accent-foreground: #ffffff;
   --favorite: #c92d3a;
   --success: #1b7f4b;
   --warning: #8a5a00;
   --danger: #b3261e;
-  --focus-ring: #704800;
-  --overlay: rgb(32 30 25 / 0.45);
-  --skeleton: #eae6da;
+  --focus-ring: #1654a6;
+  --overlay: rgb(8 16 30 / 0.45);
+  --skeleton: #e2e8f2;
+
+  --glass-bg: rgb(255 255 255 / 0.8);
+  --glass-border: rgb(0 0 0 / 0.08);
+  --glass-border-top: rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 8px 32px 0 rgb(15 39 86 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.8);
 }
 
 /* Crimson Cinema / Dark */
 [data-palette="crimson"][data-mode="dark"] {
-  --background: #101114;
-  --surface: #191a1f;
-  --surface-raised: #252327;
-  --border: #3a3438;
-  --border-strong: #7c7076;
-  --text-primary: #f5f3ef;
-  --text-muted: #a7a0a4;
+  --background: #080405;
+  --surface: #140c0e;
+  --surface-raised: #221417;
+  --border: #382428;
+  --border-strong: #8a7078;
+  --text-primary: #f9f9f8;
+  --text-muted: #b8aab0;
   --accent: #ec5a5f;
   --accent-hover: #f7686c;
-  --accent-foreground: #101114;
+  --accent-foreground: #080405;
   --favorite: #e5484d;
   --success: #3dd68c;
   --warning: #f5a524;
   --danger: #ff6369;
   --focus-ring: #f7686c;
-  --overlay: rgb(0 0 0 / 0.6);
-  --skeleton: #2c2a2e;
+  --overlay: rgb(8 4 5 / 0.75);
+  --skeleton: #1f1214;
+
+  --glass-bg: rgb(20 12 14 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --glass-border-top: rgb(255 255 255 / 0.16);
+  --glass-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
 }
 
 /* Crimson Cinema / Light */
@@ -110,4 +132,9 @@
   --focus-ring: #941b28;
   --overlay: rgb(36 26 29 / 0.45);
   --skeleton: #f0e3e5;
+
+  --glass-bg: rgb(255 255 255 / 0.8);
+  --glass-border: rgb(0 0 0 / 0.08);
+  --glass-border-top: rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 8px 32px 0 rgb(79 57 60 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.8);
 }

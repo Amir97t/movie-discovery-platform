@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getHomeCatalog } from "@/features/catalog/catalog-service";
 import { GENRE_KEYS, type Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
-import { cn } from "@/lib/cn";
 
 export default async function HomePage({
   params,
@@ -32,7 +31,7 @@ export default async function HomePage({
     const isError = catalog.status === "error";
     const source = "source" in catalog ? catalog.source : "fixture";
     return (
-      <div className="page-container">
+      <div className="page-container py-8">
         <EmptyState
           icon={isError ? <TriangleAlert className="size-10" /> : <SearchX className="size-10" />}
           title={isError ? te("errorTitle") : te("emptyTitle")}
@@ -80,8 +79,11 @@ export default async function HomePage({
     ? null
     : featured.synopsis;
 
+  const chipBase =
+    "inline-flex min-h-10 items-center gap-1.5 rounded-pill px-4 py-2 text-sm font-medium transition-all duration-200 border border-line-strong/40 bg-surface/50 text-muted hover:border-accent/40 hover:bg-surface hover:text-fg shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
   return (
-    <div className="page-container space-y-12 pt-4 sm:pt-6">
+    <div className="page-container space-y-12 pb-16 pt-4 sm:pt-6">
       <MovieHero
         kicker={t(source === "api" ? "heroKickerApi" : "heroKicker")}
         title={featured.title}
@@ -96,31 +98,19 @@ export default async function HomePage({
         }
       />
 
-      <section aria-labelledby="genres-title" className="space-y-3">
-        <h2 id="genres-title" className="text-lg font-semibold text-fg">
+      <section aria-labelledby="genres-title" className="space-y-4">
+        <h2 id="genres-title" className="text-xl font-bold tracking-tight text-fg">
           {t("genresTitle")}
         </h2>
-        <ul className="flex gap-2 overflow-x-auto pb-1">
-          <li
-            key="all"
-            className={cn(
-              "shrink-0 rounded-pill px-4 py-2 text-sm",
-              "border border-line-strong text-fg hover:border-fg/50",
-            )}
-          >
-            <Link href="/discover?page=1" className="flex items-center gap-1">
+        <ul className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <li key="all" className="shrink-0">
+            <Link href="/discover?page=1" className={chipBase}>
               {t("allGenres")}
             </Link>
           </li>
           {GENRE_KEYS.map((genre) => (
-            <li
-              key={genre}
-              className={cn(
-                "shrink-0 rounded-pill px-4 py-2 text-sm",
-                "border border-line-strong text-fg hover:border-fg/50",
-              )}
-            >
-              <Link href={`/discover?genre=${genre}&page=1`} className="flex items-center gap-1">
+            <li key={genre} className="shrink-0">
+              <Link href={`/discover?genre=${genre}&page=1`} className={chipBase}>
                 {tg(genre)}
               </Link>
             </li>
@@ -128,9 +118,9 @@ export default async function HomePage({
         </ul>
       </section>
 
-      <section id="picks" aria-labelledby="picks-title" className="scroll-mt-20 space-y-4">
+      <section id="picks" aria-labelledby="picks-title" className="scroll-mt-24 space-y-6">
         <div className="space-y-1">
-          <h2 id="picks-title" className="text-2xl font-bold text-fg">
+          <h2 id="picks-title" className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
             {t("picksTitle")}
           </h2>
           <p className="text-sm text-muted">{t(source === "api" ? "picksNoteApi" : "picksNote")}</p>

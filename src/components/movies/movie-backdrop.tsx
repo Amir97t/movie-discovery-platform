@@ -20,8 +20,8 @@ export function MovieBackdrop({ backdropUrl, title, badge }: MovieBackdropProps)
   return (
     <section
       className={cn(
-        "relative isolate overflow-hidden rounded-card bg-skeleton",
-        backdropUrl ? "h-[20rem] sm:h-[26rem]" : "h-[12rem] sm:h-[16rem]",
+        "relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-skeleton shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.12)]",
+        backdropUrl ? "h-[22rem] sm:h-[28rem] lg:h-[32rem]" : "h-[14rem] sm:h-[18rem]",
       )}
     >
       {/* Loading placeholder skeleton */}
@@ -38,9 +38,9 @@ export function MovieBackdrop({ backdropUrl, title, badge }: MovieBackdropProps)
           alt=""
           fill
           priority
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 40vw"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 55vw"
           className={cn(
-            "object-cover transition-opacity duration-300",
+            "object-cover object-center transition-opacity duration-500",
             isLoaded ? "opacity-100" : "opacity-0",
           )}
           onLoad={() => setIsLoaded(true)}
@@ -48,14 +48,17 @@ export function MovieBackdrop({ backdropUrl, title, badge }: MovieBackdropProps)
         />
       )}
 
-      {(!backdropUrl || hasError) && (
-        <BrandMark className="absolute -end-6 -top-6 -z-10 size-64 text-on-art/10 lg:size-96" />
+      {(!hasBackdrop || hasError) && (
+        <BrandMark className="absolute -end-8 -top-8 -z-10 size-72 text-on-art/10 sm:size-96 lg:size-[30rem]" />
       )}
 
-      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[var(--scrim)] via-transparent to-transparent" />
-      <div className="absolute inset-0 p-6 flex flex-col justify-end">
-        {badge}
-        <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl text-fg">
+      {/* Multi-directional legibility gradients */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[var(--background)] via-[var(--scrim)]/80 to-transparent" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[var(--background)]/85 via-[var(--background)]/30 to-transparent rtl:bg-gradient-to-l rtl:from-[var(--background)]/85 rtl:via-[var(--background)]/30 rtl:to-transparent" />
+
+      <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-12">
+        <div>{badge}</div>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-on-art drop-shadow-md sm:text-4xl lg:text-5xl leading-tight">
           {title}
         </h1>
       </div>

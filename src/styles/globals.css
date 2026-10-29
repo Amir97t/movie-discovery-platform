@@ -19,8 +19,13 @@
   --color-danger: var(--danger);
   --color-skeleton: var(--skeleton);
   --color-on-art: var(--on-art);
-  --color-swatch-gold: var(--swatch-gold);
+  --color-swatch-blue: var(--swatch-blue);
+  --color-swatch-gold: var(--swatch-blue);
   --color-swatch-crimson: var(--swatch-crimson);
+
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-line: var(--glass-border);
+  --color-glass-line-top: var(--glass-border-top);
 
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -29,7 +34,7 @@
 }
 
 @theme {
-  --radius-card: 0.75rem;
+  --radius-card: 0.875rem;
   --radius-control: 0.625rem;
   --radius-pill: 999px;
 }
@@ -45,6 +50,19 @@
     font-family: var(--font-sans);
     background-color: var(--background);
     color: var(--text-primary);
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -12%, rgb(15 39 86 / 0.32), transparent 72%),
+      radial-gradient(circle 640px at 90% 18%, rgb(79 57 60 / 0.18), transparent 65%),
+      radial-gradient(circle 520px at 8% 60%, rgb(15 39 86 / 0.14), transparent 65%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  [data-mode="light"] body {
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -12%, rgb(32 96 172 / 0.08), transparent 72%),
+      radial-gradient(circle 640px at 90% 18%, rgb(79 57 60 / 0.04), transparent 65%),
+      radial-gradient(circle 520px at 8% 60%, rgb(32 96 172 / 0.04), transparent 65%);
   }
 
   /* Persian: dedicated family and a taller line height for connected script. */
@@ -72,6 +90,52 @@
 
   @media (min-width: 64rem) {
     padding-inline: 2rem;
+  }
+}
+
+/* Apple Liquid Glass Layer Utilities */
+@utility liquid-glass {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  box-shadow: var(--glass-shadow);
+}
+
+@utility liquid-glass-pill {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-pill);
+}
+
+/* Subtle edge glow for interactive glass controls on hover/focus */
+@utility liquid-glass-interactive {
+  transition: all var(--duration-base) var(--ease-standard);
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 10px 36px 0 rgb(0 0 0 / 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-glass,
+  .liquid-glass-pill {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--surface) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .liquid-glass,
+  .liquid-glass-pill {
+    border-color: var(--border-strong) !important;
   }
 }
 

@@ -20,9 +20,9 @@ export default async function ProfilePage({
 
   return (
     <div className="page-container space-y-8 pt-4 sm:pt-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-fg sm:text-3xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
+      <header className="space-y-2">
+        <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">{t("title")}</h1>
+        <p className="text-base text-muted">{t("subtitle")}</p>
       </header>
 
       <EmptyState

@@ -1,7 +1,6 @@
 import {
   applyAppearance,
   isModePreference,
-  isPalette,
   writeStoredAppearance,
   type Appearance,
 } from "./appearance";
@@ -27,14 +26,14 @@ export function getAppearanceSnapshot(): string {
 }
 
 export function getServerAppearanceSnapshot(): string {
-  return "gold|system";
+  return "blue|dark";
 }
 
 export function parseSnapshot(snapshot: string): Appearance {
   const [palette, mode] = snapshot.split("|");
   return {
-    palette: isPalette(palette) ? palette : "gold",
-    mode: isModePreference(mode) ? mode : "system",
+    palette: palette === "crimson" ? "crimson" : "blue",
+    mode: isModePreference(mode) ? mode : "dark",
   };
 }
 

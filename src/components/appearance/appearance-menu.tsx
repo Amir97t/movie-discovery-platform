@@ -28,8 +28,10 @@ const MODE_ICONS: Record<ModePreference, LucideIcon> = {
 
 const optionClasses = (selected: boolean) =>
   cn(
-    "flex min-h-11 w-full items-center gap-2 rounded-control border px-3 text-sm font-medium transition-colors duration-200",
-    selected ? "border-accent bg-raised text-fg" : "border-line-strong text-fg hover:bg-raised",
+    "flex min-h-11 w-full items-center gap-2 rounded-control border px-3 text-sm font-medium transition-all duration-200",
+    selected
+      ? "border-accent bg-accent/20 text-fg shadow-sm font-semibold"
+      : "border-line-strong/60 text-fg hover:border-line-strong hover:bg-raised/70",
   );
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -108,7 +110,7 @@ export function AppearanceMenu() {
       <div
         id={panelId}
         hidden={!open}
-        className="absolute end-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw_-_2rem)] space-y-4 rounded-card border border-line bg-surface p-4 shadow-lg"
+        className="liquid-glass absolute end-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw_-_2rem)] space-y-4 rounded-card p-4 shadow-2xl"
       >
         <Group title={t("language")}>
           {routing.locales.map((code) => (
@@ -142,7 +144,7 @@ export function AppearanceMenu() {
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0 rounded-pill",
-                  value === "gold" ? "bg-swatch-gold" : "bg-swatch-crimson",
+                  value === "blue" ? "bg-swatch-blue" : "bg-swatch-crimson",
                 )}
               />
               <span className="flex-1 text-start">{t(`palettes.${value}`)}</span>

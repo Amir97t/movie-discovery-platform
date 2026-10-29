@@ -31,8 +31,8 @@ function themeTokens(palette: string, mode: string): Record<string, string> {
 }
 
 const THEMES = [
-  ["gold", "dark"],
-  ["gold", "light"],
+  ["blue", "dark"],
+  ["blue", "light"],
   ["crimson", "dark"],
   ["crimson", "light"],
 ] as const;

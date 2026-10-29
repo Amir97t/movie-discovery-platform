@@ -13,7 +13,7 @@ import { THEME_INIT_SCRIPT } from "./theme-script";
 
 describe("parseAppearance", () => {
   it("falls back to defaults for empty, corrupt or wrong-typed storage", () => {
-    for (const raw of [null, undefined, "", "not json", "null", "42", '"gold"', "[]"]) {
+    for (const raw of [null, undefined, "", "not json", "null", "42", '"blue"', '"gold"', "[]"]) {
       expect(parseAppearance(raw)).toEqual(DEFAULT_APPEARANCE);
     }
   });
@@ -21,17 +21,30 @@ describe("parseAppearance", () => {
   it("keeps valid fields and defaults invalid ones independently", () => {
     expect(parseAppearance('{"palette":"crimson","mode":"banana"}')).toEqual({
       palette: "crimson",
-      mode: "system",
+      mode: "dark",
     });
     expect(parseAppearance('{"palette":"neon","mode":"light"}')).toEqual({
-      palette: "gold",
+      palette: "blue",
       mode: "light",
+    });
+  });
+
+  it("migrates legacy gold palette to blue seamlessly", () => {
+    expect(parseAppearance('{"palette":"gold","mode":"light"}')).toEqual({
+      palette: "blue",
+      mode: "light",
+    });
+    expect(parseAppearance('{"palette":"gold","mode":"dark"}')).toEqual({
+      palette: "blue",
+      mode: "dark",
     });
   });
 
   it("round-trips through serialize", () => {
     const value = { palette: "crimson", mode: "dark" } as const;
     expect(parseAppearance(serializeAppearance(value))).toEqual(value);
+    const blueVal = { palette: "blue", mode: "light" } as const;
+    expect(parseAppearance(serializeAppearance(blueVal))).toEqual(blueVal);
   });
 });
 
@@ -86,7 +99,15 @@ describe("pre-paint script parity", () => {
     return { palette: root.dataset.palette, mode: root.dataset.mode, pref: root.dataset.modePref };
   }
 
-  const cases = [null, "garbage", '{"palette":"crimson","mode":"light"}', '{"mode":"system"}', '{"palette":"x","mode":"dark"}'];
+  const cases = [
+    null,
+    "garbage",
+    '{"palette":"crimson","mode":"light"}',
+    '{"mode":"system"}',
+    '{"palette":"x","mode":"dark"}',
+    '{"palette":"gold","mode":"dark"}',
+    '{"palette":"blue","mode":"dark"}',
+  ];
 
   it("produces the same result as applyAppearance for stored and OS inputs", () => {
     for (const stored of cases) {

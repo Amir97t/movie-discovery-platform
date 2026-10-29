@@ -27,8 +27,8 @@ const VIEWPORTS: Array<[number, number]> = [
 ];
 const SCREENSHOT_WIDTHS = new Set([390, 768, 1280]);
 const THEMES = [
-  { palette: "gold", mode: "light" },
-  { palette: "gold", mode: "dark" },
+  { palette: "blue", mode: "light" },
+  { palette: "blue", mode: "dark" },
   { palette: "crimson", mode: "light" },
   { palette: "crimson", mode: "dark" },
 ] as const;
