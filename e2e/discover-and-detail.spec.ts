@@ -3,16 +3,15 @@
  * internal link navigation, genre filtering, pagination, and image loading.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64",
 );
 
-test.beforeEach(async ({ page }) => {
-  // Intercept Next.js image optimization endpoint so tests are deterministic and offline,
-  // preventing network timeouts when remote API images are unreachable.
+/** Helper to mock image optimization requests so general tests do not hang on external network. */
+async function mockImageResponses(page: Page) {
   await page.route("**/_next/image*", async (route) => {
     await route.fulfill({
       status: 200,
@@ -20,9 +19,13 @@ test.beforeEach(async ({ page }) => {
       body: TRANSPARENT_PNG,
     });
   });
-});
+}
 
 test.describe("Movie detail page (live API)", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
   test("renders an existing movie's details from the live API", async ({ page }) => {
     await page.goto("/en/movies/1");
 
@@ -70,6 +73,10 @@ test.describe("Movie detail page (live API)", () => {
 });
 
 test.describe("Discover page (live API)", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
   test("renders genre-filtered results from the API with correct genre name", async ({ page }) => {
     await page.goto("/en/discover?genre=scifi&page=1");
 
@@ -115,6 +122,10 @@ test.describe("Discover page (live API)", () => {
 });
 
 test.describe("Internal localized navigation", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
   test("movie card on Home navigates to detail page under /en", async ({ page }) => {
     await page.goto("/en");
     const firstMovieCard = page.locator("#picks article a").first();
@@ -183,6 +194,10 @@ test.describe("Internal localized navigation", () => {
 });
 
 test.describe("Genre filtering, chips stability and pagination", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
   test("all genre chips remain stable and visible after filtering and pagination", async ({ page }) => {
     await page.goto("/en/discover?genre=scifi&page=1");
     const genreLinks = page.locator("section[aria-labelledby='discover-genres-title'] ul li a");
@@ -220,28 +235,61 @@ test.describe("Genre filtering, chips stability and pagination", () => {
 });
 
 test.describe("Image loading and fallback behavior", () => {
-  test("successful poster load renders the image", async ({ page }) => {
-    await page.goto("/en/discover?page=1");
-    const poster = page.locator("[data-poster-status='loaded']").first();
-    await expect(poster).toBeVisible();
+  test.afterEach(async ({ page }) => {
+    // Ensure no route interception leaks into subsequent tests
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
-  test("simulated failed poster load renders fallback without breaking card layout", async ({ page }) => {
-    // Unroute the default handler and abort image requests to simulate failure
-    await page.unroute("**/_next/image*");
+  test("successful poster load renders the image and sets data-poster-status='loaded'", async ({ page }) => {
+    // 1. Intercept image optimization requests before page navigation
+    await page.route("**/_next/image*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "image/png",
+        body: TRANSPARENT_PNG,
+      });
+    });
+
+    // 2. Navigate to Discover page
+    await page.goto("/en/discover?page=1");
+
+    // 3. Verify image load event fires and data-poster-status becomes 'loaded'
+    const poster = page.locator("article [data-poster-status='loaded']").first();
+    await expect(poster).toBeVisible();
+    await expect(poster).toHaveAttribute("data-poster-status", "loaded");
+  });
+
+  test("simulated failed poster load renders fallback, sets data-poster-status='error', and retains card dimensions", async ({ page }) => {
+    // 1. Intercept image requests before page navigation and abort deliberately
     await page.route("**/_next/image*", async (route) => {
       await route.abort();
     });
 
+    // 2. Navigate to Discover page
     await page.goto("/en/discover?page=1");
-    const fallback = page.locator("[data-testid='poster-fallback']").first();
+
+    // 3. Verify data-poster-status="error"
+    const poster = page.locator("article [data-poster-status='error']").first();
+    await expect(poster).toBeVisible();
+    await expect(poster).toHaveAttribute("data-poster-status", "error");
+
+    // 4. Verify fallback artwork is displayed instead of blank area
+    const fallback = poster.locator("[data-testid='poster-fallback']");
     await expect(fallback).toBeVisible();
 
+    // 5. Verify the card retains its layout and dimensions
     const card = page.locator("article").first();
     await expect(card).toBeVisible();
     const box = await card.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThan(50);
     expect(box!.height).toBeGreaterThan(100);
+
+    // 6. Verify poster retains aspect-[2/3] geometry
+    const posterBox = await poster.boundingBox();
+    expect(posterBox).not.toBeNull();
+    await expect(poster).toHaveClass(/aspect-\[2\/3\]/);
+    const ratio = posterBox!.height / posterBox!.width;
+    expect(ratio).toBeCloseTo(1.5, 1);
   });
 });

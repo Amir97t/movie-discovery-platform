@@ -1,5 +1,20 @@
 import { expect, test } from "@playwright/test";
 
+const TRANSPARENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/_next/image*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: TRANSPARENT_PNG,
+    });
+  });
+});
+
 const VIEWPORTS: Array<[number, number]> = [
   [360, 800],
   [390, 844],
