@@ -1,25 +1,28 @@
 /*
- * Design tokens. One shared system: components only ever read these
- * variables; palette and mode change the values, never the component code.
- * DOM contract: <html data-palette="blue|crimson" data-mode="light|dark">.
+ * Design tokens: Cinema Red Design System.
+ * One shared system: components read semantic CSS variables;
+ * mode (dark/light) changes values, never component structure.
+ * DOM contract: <html data-mode="light|dark">.
  *
- * Color palette foundation (Cinematic Movie Discovery):
- *  - Cinematic black: #040305
- *  - Muted burgundy: #4F393C
- *  - Deep navy: #0F2756
- *  - Blue accent: #2060AC / accessible tint #4DA3FF
- *  - Warm white: #F9F9F8
- *  - Warm red: #A6392C
- *  - Muted olive: #9C9A65
- *  - Soft taupe: #B3ACA7 / accessible tint #A2ADC2
+ * Cinema Red Brand Palette:
+ *  - Dark background: #0A0A0C
+ *  - Dark surface: #151518
+ *  - Dark raised surface: #202024
+ *  - Light background: #F4F1EE
+ *  - Light surface: #FFFFFF
+ *  - Light raised surface: #EEE9E5
+ *  - Brand red: #E50914
+ *  - Accessible primary action red: #B20710
+ *  - Action hover: #8F060D
+ *  - Action foreground: #FFFFFF
+ *  - Favorite / Rating highlight: warm gold (#F5A524 dark, #8A5A00 light)
  */
 
 :root {
   /* Theme-independent */
-  --swatch-blue: #3b8eed;
-  --swatch-crimson: #ec5a5f;
-  --on-art: #f9f9f8; /* text drawn over artwork + scrim */
-  --scrim: rgb(4 3 5 / 0.82);
+  --brand-red: #e50914;
+  --on-art: #f5f5f4;
+  --scrim: rgb(10 10 12 / 0.82);
 
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
@@ -29,112 +32,62 @@
   --duration-panel: 240ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Apple Liquid Glass parameters */
+  /* Liquid Glass parameters */
   --glass-blur: 16px;
   --glass-saturate: 180%;
 }
 
-/* Midnight Blue Cinematic / Dark (also the no-attribute fallback) */
+/* Dark — Cinematic Dark (also the default fallback) */
 :root,
-[data-palette="blue"][data-mode="dark"] {
-  --background: #040305;
-  --surface: #0c1322;
-  --surface-raised: #151f38;
-  --border: #1c2744;
-  --border-strong: #6275a3;
-  --text-primary: #f9f9f8;
-  --text-muted: #a2adc2;
-  --accent: #4da3ff;
-  --accent-hover: #75b7ff;
-  --accent-foreground: #040305;
-  --favorite: #ff5c5c;
+[data-mode="dark"] {
+  --background: #0a0a0c;
+  --surface: #151518;
+  --surface-raised: #202024;
+  --border: #2a2a30;
+  --border-strong: #696977;
+  --text-primary: #f5f5f4;
+  --text-muted: #a1a1aa;
+  --accent: #e50914;
+  --accent-hover: #b20710;
+  --accent-foreground: #ffffff;
+  --favorite: #f5a524;
   --success: #3dd68c;
   --warning: #f5a524;
   --danger: #ff6369;
-  --focus-ring: #75b7ff;
-  --overlay: rgb(4 3 5 / 0.75);
-  --skeleton: #131c31;
+  --focus-ring: #e50914;
+  --overlay: rgb(10 10 12 / 0.78);
+  --skeleton: #1d1d22;
 
-  --glass-bg: rgb(12 19 34 / 0.72);
+  --glass-bg: rgb(21 21 24 / 0.75);
   --glass-border: rgb(255 255 255 / 0.08);
-  --glass-border-top: rgb(255 255 255 / 0.16);
-  --glass-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
+  --glass-border-top: rgb(255 255 255 / 0.15);
+  --glass-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.5), inset 0 1px 0 0 rgb(255 255 255 / 0.08);
 }
 
-/* Midnight Blue / Light */
-[data-palette="blue"][data-mode="light"] {
-  --background: #f4f6fb;
+/* Light — Warm Cinema */
+[data-mode="light"] {
+  --background: #f4f1ee;
   --surface: #ffffff;
-  --surface-raised: #eaf0f9;
-  --border: #d4dde8;
-  --border-strong: #63748e;
-  --text-primary: #08101e;
-  --text-muted: #4b5971;
-  --accent: #1654a6;
-  --accent-hover: #0e3e7f;
+  --surface-raised: #eee9e5;
+  --border: #ded7d2;
+  --border-strong: #8a7d79;
+  --text-primary: #1b1718;
+  --text-muted: #655d5b;
+  --accent: #b20710;
+  --accent-hover: #8f060d;
   --accent-foreground: #ffffff;
-  --favorite: #c92d3a;
-  --success: #1b7f4b;
+  --favorite: #8a5a00;
+  --success: #167342;
   --warning: #8a5a00;
   --danger: #b3261e;
-  --focus-ring: #1654a6;
-  --overlay: rgb(8 16 30 / 0.45);
-  --skeleton: #e2e8f2;
+  --focus-ring: #b20710;
+  --overlay: rgb(27 23 24 / 0.45);
+  --skeleton: #e3ddd7;
+  --scrim: rgb(244 241 238 / 0.85);
+  --on-art: #1b1718;
 
-  --glass-bg: rgb(255 255 255 / 0.8);
+  --glass-bg: rgb(255 255 255 / 0.85);
   --glass-border: rgb(0 0 0 / 0.08);
-  --glass-border-top: rgb(255 255 255 / 0.9);
-  --glass-shadow: 0 8px 32px 0 rgb(15 39 86 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.8);
-}
-
-/* Crimson Cinema / Dark */
-[data-palette="crimson"][data-mode="dark"] {
-  --background: #080405;
-  --surface: #140c0e;
-  --surface-raised: #221417;
-  --border: #382428;
-  --border-strong: #8a7078;
-  --text-primary: #f9f9f8;
-  --text-muted: #b8aab0;
-  --accent: #ec5a5f;
-  --accent-hover: #f7686c;
-  --accent-foreground: #080405;
-  --favorite: #e5484d;
-  --success: #3dd68c;
-  --warning: #f5a524;
-  --danger: #ff6369;
-  --focus-ring: #f7686c;
-  --overlay: rgb(8 4 5 / 0.75);
-  --skeleton: #1f1214;
-
-  --glass-bg: rgb(20 12 14 / 0.72);
-  --glass-border: rgb(255 255 255 / 0.08);
-  --glass-border-top: rgb(255 255 255 / 0.16);
-  --glass-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
-}
-
-/* Crimson Cinema / Light */
-[data-palette="crimson"][data-mode="light"] {
-  --background: #f8f4f4;
-  --surface: #ffffff;
-  --surface-raised: #fff8f8;
-  --border: #e7d8da;
-  --border-strong: #887a7e;
-  --text-primary: #241a1d;
-  --text-muted: #75676b;
-  --accent: #b42332;
-  --accent-hover: #941b28;
-  --accent-foreground: #ffffff;
-  --favorite: #b42332;
-  --success: #1b7f4b;
-  --warning: #8a5a00;
-  --danger: #b3261e;
-  --focus-ring: #941b28;
-  --overlay: rgb(36 26 29 / 0.45);
-  --skeleton: #f0e3e5;
-
-  --glass-bg: rgb(255 255 255 / 0.8);
-  --glass-border: rgb(0 0 0 / 0.08);
-  --glass-border-top: rgb(255 255 255 / 0.9);
-  --glass-shadow: 0 8px 32px 0 rgb(79 57 60 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.8);
+  --glass-border-top: rgb(255 255 255 / 0.95);
+  --glass-shadow: 0 8px 32px 0 rgb(27 23 24 / 0.06), inset 0 1px 0 0 rgb(255 255 255 / 0.85);
 }

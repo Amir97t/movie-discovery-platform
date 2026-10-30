@@ -13,38 +13,30 @@ import { THEME_INIT_SCRIPT } from "./theme-script";
 
 describe("parseAppearance", () => {
   it("falls back to defaults for empty, corrupt or wrong-typed storage", () => {
-    for (const raw of [null, undefined, "", "not json", "null", "42", '"blue"', '"gold"', "[]"]) {
+    for (const raw of [null, undefined, "", "not json", "null", "42", "[]"]) {
       expect(parseAppearance(raw)).toEqual(DEFAULT_APPEARANCE);
     }
   });
 
-  it("keeps valid fields and defaults invalid ones independently", () => {
-    expect(parseAppearance('{"palette":"crimson","mode":"banana"}')).toEqual({
-      palette: "crimson",
-      mode: "dark",
-    });
-    expect(parseAppearance('{"palette":"neon","mode":"light"}')).toEqual({
-      palette: "blue",
-      mode: "light",
-    });
+  it("extracts and preserves valid modes and defaults invalid ones", () => {
+    expect(parseAppearance('{"mode":"light"}')).toEqual({ mode: "light" });
+    expect(parseAppearance('{"mode":"dark"}')).toEqual({ mode: "dark" });
+    expect(parseAppearance('{"mode":"system"}')).toEqual({ mode: "system" });
+    expect(parseAppearance('{"mode":"banana"}')).toEqual({ mode: "dark" });
   });
 
-  it("migrates legacy gold palette to blue seamlessly", () => {
-    expect(parseAppearance('{"palette":"gold","mode":"light"}')).toEqual({
-      palette: "blue",
-      mode: "light",
-    });
-    expect(parseAppearance('{"palette":"gold","mode":"dark"}')).toEqual({
-      palette: "blue",
-      mode: "dark",
-    });
+  it("migrates legacy records with palette keys while preserving their saved mode", () => {
+    expect(parseAppearance('{"palette":"blue","mode":"light"}')).toEqual({ mode: "light" });
+    expect(parseAppearance('{"palette":"crimson","mode":"dark"}')).toEqual({ mode: "dark" });
+    expect(parseAppearance('{"palette":"gold","mode":"system"}')).toEqual({ mode: "system" });
+    expect(parseAppearance('{"palette":"gold"}')).toEqual({ mode: "dark" });
   });
 
   it("round-trips through serialize", () => {
-    const value = { palette: "crimson", mode: "dark" } as const;
-    expect(parseAppearance(serializeAppearance(value))).toEqual(value);
-    const blueVal = { palette: "blue", mode: "light" } as const;
-    expect(parseAppearance(serializeAppearance(blueVal))).toEqual(blueVal);
+    const darkVal = { mode: "dark" } as const;
+    expect(parseAppearance(serializeAppearance(darkVal))).toEqual(darkVal);
+    const lightVal = { mode: "light" } as const;
+    expect(parseAppearance(serializeAppearance(lightVal))).toEqual(lightVal);
   });
 });
 
@@ -72,35 +64,37 @@ describe("storage helpers", () => {
     expect(writeStoredAppearance(null, DEFAULT_APPEARANCE)).toBe(false);
   });
 
-  it("migrates legacy gold palette in storage to canonical blue", () => {
+  it("migrates legacy palette records in storage to canonical mode-only JSON", () => {
     let saved: string | null = null;
     const storage = {
-      getItem: () => '{"palette":"gold","mode":"light"}',
+      getItem: () => '{"palette":"blue","mode":"light"}',
       setItem: (_k: string, v: string) => {
         saved = v;
       },
     };
     const appearance = readStoredAppearance(storage);
-    expect(appearance).toEqual({ palette: "blue", mode: "light" });
-    expect(saved).toBe(JSON.stringify({ palette: "blue", mode: "light" }));
+    expect(appearance).toEqual({ mode: "light" });
+    expect(saved).toBe(JSON.stringify({ mode: "light" }));
   });
 });
 
 describe("applyAppearance", () => {
-  it("writes the data-attribute contract", () => {
+  it("writes the data-mode contract and removes any legacy data-palette", () => {
     const root = document.createElement("html");
-    const resolved = applyAppearance(root, { palette: "crimson", mode: "system" }, true);
+    root.dataset.palette = "blue";
+    const resolved = applyAppearance(root, { mode: "system" }, true);
     expect(resolved).toBe("dark");
-    expect(root.dataset.palette).toBe("crimson");
     expect(root.dataset.mode).toBe("dark");
     expect(root.dataset.modePref).toBe("system");
     expect(root.style.colorScheme).toBe("dark");
+    expect(root.dataset.palette).toBeUndefined();
   });
 });
 
 describe("pre-paint script parity", () => {
   function runScript(stored: string | null, prefersDark: boolean) {
     const root = document.createElement("html");
+    root.dataset.palette = "blue";
     const fakeDocument = { documentElement: root };
     const fakeStorage = { getItem: (key: string) => (key === APPEARANCE_STORAGE_KEY ? stored : null) };
     const fakeWindow = { matchMedia: () => ({ matches: prefersDark }) };
@@ -109,17 +103,18 @@ describe("pre-paint script parity", () => {
       fakeStorage,
       fakeWindow,
     );
-    return { palette: root.dataset.palette, mode: root.dataset.mode, pref: root.dataset.modePref };
+    return { mode: root.dataset.mode, pref: root.dataset.modePref, palette: root.dataset.palette };
   }
 
   const cases = [
     null,
     "garbage",
-    '{"palette":"crimson","mode":"light"}',
+    '{"mode":"light"}',
+    '{"mode":"dark"}',
     '{"mode":"system"}',
-    '{"palette":"x","mode":"dark"}',
-    '{"palette":"gold","mode":"dark"}',
+    '{"palette":"crimson","mode":"light"}',
     '{"palette":"blue","mode":"dark"}',
+    '{"palette":"gold","mode":"system"}',
   ];
 
   it("produces the same result as applyAppearance for stored and OS inputs", () => {
@@ -129,20 +124,20 @@ describe("pre-paint script parity", () => {
         const root = document.createElement("html");
         const resolved = applyAppearance(root, expected, prefersDark);
         expect(runScript(stored, prefersDark)).toEqual({
-          palette: expected.palette,
           mode: resolved,
           pref: expected.mode,
+          palette: undefined,
         });
       }
     }
   });
 
-  it("migrates legacy gold palette in storage to blue during pre-paint script execution", () => {
+  it("migrates legacy records in storage to mode-only during pre-paint script execution", () => {
     let saved: string | null = null;
     const root = document.createElement("html");
     const fakeDocument = { documentElement: root };
     const fakeStorage = {
-      getItem: () => '{"palette":"gold","mode":"system"}',
+      getItem: () => '{"palette":"gold","mode":"light"}',
       setItem: (_k: string, v: string) => {
         saved = v;
       },
@@ -153,8 +148,8 @@ describe("pre-paint script parity", () => {
       fakeStorage,
       fakeWindow,
     );
-    expect(root.dataset.palette).toBe("blue");
-    expect(root.dataset.modePref).toBe("system");
-    expect(saved).toBe(JSON.stringify({ palette: "blue", mode: "system" }));
+    expect(root.dataset.mode).toBe("light");
+    expect(root.dataset.modePref).toBe("light");
+    expect(saved).toBe(JSON.stringify({ mode: "light" }));
   });
 });

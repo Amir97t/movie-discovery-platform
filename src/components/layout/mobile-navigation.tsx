@@ -18,7 +18,7 @@ export function MobileNavigation() {
     <nav
       aria-label={t("label")}
       data-mobile-nav=""
-      className="liquid-glass fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)] shadow-2xl md:hidden"
+      className="liquid-glass fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] shadow-2xl md:hidden"
     >
       <ul className="grid grid-cols-4">
         {NAV_ITEMS.map(({ key, href, icon: Icon, available }) => {

@@ -67,23 +67,23 @@ export default async function MovieDetailPage({
         {/* Quick Highlights Bar */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {movie.rating !== null && (
-            <div className="rounded-xl border border-white/[0.08] bg-surface/50 p-4 shadow-sm">
+            <div className="rounded-xl border border-line bg-surface/50 p-4 shadow-sm">
               <dt className="text-xs font-medium text-muted">{t("rating")}</dt>
               <dd className="mt-1 flex items-center gap-1.5 text-lg font-bold text-fg">
-                <Star aria-hidden="true" className="size-4 fill-current text-accent" />
+                <Star aria-hidden="true" className="size-4 fill-current text-favorite" />
                 <span>{movie.rating.toFixed(1)}</span>
                 <span className="text-xs font-normal text-muted">/ 10</span>
               </dd>
             </div>
           )}
           {movie.year !== null && (
-            <div className="rounded-xl border border-white/[0.08] bg-surface/50 p-4 shadow-sm">
+            <div className="rounded-xl border border-line bg-surface/50 p-4 shadow-sm">
               <dt className="text-xs font-medium text-muted">{t("year")}</dt>
               <dd className="mt-1 text-lg font-bold text-fg">{movie.year}</dd>
             </div>
           )}
           {movie.runtimeMinutes !== null && (
-            <div className="rounded-xl border border-white/[0.08] bg-surface/50 p-4 shadow-sm">
+            <div className="rounded-xl border border-line bg-surface/50 p-4 shadow-sm">
               <dt className="text-xs font-medium text-muted">{t("runtime")}</dt>
               <dd className="mt-1 text-lg font-bold text-fg">
                 {t("minutes", { value: movie.runtimeMinutes })}
@@ -91,7 +91,7 @@ export default async function MovieDetailPage({
             </div>
           )}
           {movie.country && (
-            <div className="rounded-xl border border-white/[0.08] bg-surface/50 p-4 shadow-sm">
+            <div className="rounded-xl border border-line bg-surface/50 p-4 shadow-sm">
               <dt className="text-xs font-medium text-muted">{t("country")}</dt>
               <dd className="mt-1 truncate text-lg font-bold text-fg">{movie.country}</dd>
             </div>
@@ -99,7 +99,7 @@ export default async function MovieDetailPage({
         </div>
 
         {/* Detailed Metadata Grid */}
-        <dl className="grid grid-cols-1 gap-6 rounded-2xl border border-white/[0.08] bg-surface/40 p-6 sm:grid-cols-2 sm:p-8">
+        <dl className="grid grid-cols-1 gap-6 rounded-2xl border border-line bg-surface/40 p-6 sm:grid-cols-2 sm:p-8">
           {movie.genres.length > 0 && (
             <div className="space-y-1">
               <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{t("genres")}</dt>
@@ -130,14 +130,14 @@ export default async function MovieDetailPage({
         </dl>
 
         {movie.synopsis && (
-          <section className="space-y-3 rounded-2xl border border-white/[0.08] bg-surface/30 p-6 sm:p-8">
+          <section className="space-y-3 rounded-2xl border border-line bg-surface/30 p-6 sm:p-8">
             <h3 className="text-lg font-bold tracking-tight text-fg">{t("synopsis")}</h3>
             <p className="max-w-3xl text-base leading-relaxed text-muted">{movie.synopsis}</p>
           </section>
         )}
 
         {movie.imdb_id && (
-          <section className="space-y-3 border-t border-white/[0.08] pt-6">
+          <section className="space-y-3 border-t border-line pt-6">
             <h3 className="text-lg font-bold tracking-tight text-fg">{t("identifiers")}</h3>
             <dl className="grid grid-cols-2 gap-4 text-sm sm:max-w-md">
               <div>
@@ -155,7 +155,7 @@ export default async function MovieDetailPage({
         )}
 
         {movie.website && movie.website !== "N/A" && (
-          <section className="space-y-2 border-t border-white/[0.08] pt-6">
+          <section className="space-y-2 border-t border-line pt-6">
             <h3 className="text-lg font-bold tracking-tight text-fg">{t("website")}</h3>
             <a
               href={movie.website}

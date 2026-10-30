@@ -136,7 +136,7 @@ export default async function DiscoverPage({
               className={cn(
                 chipBase,
                 !selectedGenreKey
-                  ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(77,163,255,0.3)]"
+                  ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.3)]"
                   : "border border-line-strong/40 bg-surface/50 text-muted hover:border-accent/40 hover:bg-surface hover:text-fg",
               )}
             >
@@ -152,7 +152,7 @@ export default async function DiscoverPage({
                   className={cn(
                     chipBase,
                     isSelected
-                      ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(77,163,255,0.3)]"
+                      ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.3)]"
                       : "border border-line-strong/40 bg-surface/50 text-muted hover:border-accent/40 hover:bg-surface hover:text-fg",
                   )}
                 >

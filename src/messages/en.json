@@ -18,9 +18,7 @@
   "appearance": {
     "trigger": "Appearance and language",
     "language": "Language",
-    "palette": "Palette",
     "mode": "Mode",
-    "palettes": { "blue": "Midnight Blue", "crimson": "Crimson" },
     "modes": { "light": "Light", "dark": "Dark", "system": "System" }
   },
   "home": {

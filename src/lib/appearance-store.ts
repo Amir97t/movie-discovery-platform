@@ -22,18 +22,16 @@ export function subscribeAppearance(listener: () => void): () => void {
 /** Snapshot is a primitive string so React can compare it cheaply. */
 export function getAppearanceSnapshot(): string {
   const root = document.documentElement;
-  return `${root.dataset.palette ?? ""}|${root.dataset.modePref ?? ""}`;
+  return root.dataset.modePref ?? "";
 }
 
 export function getServerAppearanceSnapshot(): string {
-  return "blue|dark";
+  return "dark";
 }
 
 export function parseSnapshot(snapshot: string): Appearance {
-  const [palette, mode] = snapshot.split("|");
   return {
-    palette: palette === "crimson" ? "crimson" : "blue",
-    mode: isModePreference(mode) ? mode : "dark",
+    mode: isModePreference(snapshot) ? snapshot : "dark",
   };
 }
 

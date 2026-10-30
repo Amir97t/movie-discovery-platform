@@ -1,48 +1,38 @@
 /**
- * Appearance (palette + mode) model. Pure functions only, so the logic is
- * unit-testable without a browser. The pre-paint script in theme-script.ts
- * mirrors parseAppearance/resolveMode; a test keeps the two in sync.
+ * Appearance (mode) model. Pure functions only, unit-testable without a browser.
+ * The pre-paint script in theme-script.ts mirrors parseAppearance/resolveMode;
+ * tests keep the two in sync.
  */
 
 export const APPEARANCE_STORAGE_KEY = "frame-appearance";
 
-export const PALETTES = ["blue", "crimson"] as const;
 export const MODES = ["light", "dark", "system"] as const;
 
-export type Palette = (typeof PALETTES)[number];
 export type ModePreference = (typeof MODES)[number];
 export type ResolvedMode = "light" | "dark";
 
 export interface Appearance {
-  palette: Palette;
   mode: ModePreference;
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { palette: "blue", mode: "dark" };
-
-export function isPalette(value: unknown): value is Palette {
-  return typeof value === "string" && (PALETTES as readonly string[]).includes(value);
-}
+export const DEFAULT_APPEARANCE: Appearance = { mode: "dark" };
 
 export function isModePreference(value: unknown): value is ModePreference {
   return typeof value === "string" && (MODES as readonly string[]).includes(value);
 }
 
-/** Never throws: corrupt or partial storage falls back to defaults per field. Migrates 'gold' to 'blue'. */
+/**
+ * Safely parses stored JSON. Backward-compatible with legacy records that contained
+ * palette keys (e.g. { palette: "blue", mode: "light" }), extracting and preserving
+ * the mode preference while defaulting to "dark".
+ */
 export function parseAppearance(raw: string | null | undefined): Appearance {
   if (!raw) return { ...DEFAULT_APPEARANCE };
   try {
     const data: unknown = JSON.parse(raw);
     if (data && typeof data === "object") {
       const record = data as Record<string, unknown>;
-      let palette: Palette = DEFAULT_APPEARANCE.palette;
-      if (record.palette === "crimson") {
-        palette = "crimson";
-      } else if (record.palette === "blue" || record.palette === "gold") {
-        palette = "blue";
-      }
       return {
-        palette,
         mode: isModePreference(record.mode) ? record.mode : DEFAULT_APPEARANCE.mode,
       };
     }
@@ -53,7 +43,7 @@ export function parseAppearance(raw: string | null | undefined): Appearance {
 }
 
 export function serializeAppearance(appearance: Appearance): string {
-  return JSON.stringify({ palette: appearance.palette, mode: appearance.mode });
+  return JSON.stringify({ mode: appearance.mode });
 }
 
 export function resolveMode(mode: ModePreference, prefersDark: boolean): ResolvedMode {
@@ -61,6 +51,10 @@ export function resolveMode(mode: ModePreference, prefersDark: boolean): Resolve
   return mode;
 }
 
+/**
+ * Reads stored appearance from storage. If the stored record contains legacy fields
+ * (such as "palette") or is not canonical mode-only JSON, it safely migrates storage.
+ */
 export function readStoredAppearance(
   storage: Pick<Storage, "getItem" | "setItem"> | null | undefined,
 ): Appearance {
@@ -70,15 +64,14 @@ export function readStoredAppearance(
     if (raw && storage && "setItem" in storage && typeof storage.setItem === "function") {
       try {
         const data: unknown = JSON.parse(raw);
-        if (
-          data &&
-          typeof data === "object" &&
-          (data as Record<string, unknown>).palette === "gold"
-        ) {
-          writeStoredAppearance(storage, parsed);
+        if (data && typeof data === "object") {
+          const record = data as Record<string, unknown>;
+          if ("palette" in record || Object.keys(record).length !== 1 || record.mode !== parsed.mode) {
+            writeStoredAppearance(storage, parsed);
+          }
         }
       } catch {
-        // ignore parse errors
+        // ignore JSON errors
       }
     }
     return parsed;
@@ -101,16 +94,16 @@ export function writeStoredAppearance(
   }
 }
 
-/** Writes the DOM contract: data-palette, data-mode (resolved), data-mode-pref. */
+/** Writes the DOM contract: data-mode (resolved), data-mode-pref. */
 export function applyAppearance(
   root: HTMLElement,
   appearance: Appearance,
   prefersDark: boolean,
 ): ResolvedMode {
   const resolved = resolveMode(appearance.mode, prefersDark);
-  root.dataset.palette = appearance.palette;
   root.dataset.mode = resolved;
   root.dataset.modePref = appearance.mode;
   root.style.colorScheme = resolved;
+  delete root.dataset.palette;
   return resolved;
 }

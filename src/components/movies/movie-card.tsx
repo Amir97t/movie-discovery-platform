@@ -33,7 +33,7 @@ export function MovieCard({
 }: MovieCardProps) {
   const cardBody = (
     <div className="group relative block transition-transform duration-200">
-      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/40 group-hover:shadow-[0_12px_28px_rgba(0,0,0,0.6)]">
+      <div className="relative overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-md">
         <PosterArt art={art} posterUrl={posterUrl} className="aspect-[2/3] w-full" />
       </div>
       <h3 className="mt-3 line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-fg transition-colors duration-200 group-hover:text-accent">
@@ -43,7 +43,7 @@ export function MovieCard({
       <p className="mt-1.5 flex min-h-[1.25em] items-center gap-1.5 text-xs text-fg">
         {ratingText ? (
           <>
-            <Star aria-hidden="true" className="size-3.5 fill-current text-accent drop-shadow-[0_0_4px_rgba(77,163,255,0.4)]" />
+            <Star aria-hidden="true" className="size-3.5 fill-current text-favorite" />
             <span className="sr-only">{ratingLabel}</span>
             <span aria-hidden="true" className="font-medium">{ratingText}</span>
           </>

@@ -18,9 +18,7 @@
   "appearance": {
     "trigger": "ظاهر و زبان",
     "language": "زبان",
-    "palette": "پالت رنگی",
     "mode": "حالت",
-    "palettes": { "blue": "آبی نیمه‌شب", "crimson": "سرخ" },
     "modes": { "light": "روشن", "dark": "تاریک", "system": "سیستم" }
   },
   "home": {

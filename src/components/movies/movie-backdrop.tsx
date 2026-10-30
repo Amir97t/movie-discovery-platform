@@ -20,7 +20,7 @@ export function MovieBackdrop({ backdropUrl, title, badge }: MovieBackdropProps)
   return (
     <section
       className={cn(
-        "relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-skeleton shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.12)]",
+        "relative isolate overflow-hidden rounded-2xl border border-line bg-skeleton shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.12)]",
         backdropUrl ? "h-[22rem] sm:h-[28rem] lg:h-[32rem]" : "h-[14rem] sm:h-[18rem]",
       )}
     >

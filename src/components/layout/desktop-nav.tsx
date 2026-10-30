@@ -18,7 +18,7 @@ export function DesktopNav() {
             "inline-flex min-h-11 items-center rounded-pill px-4 text-sm font-medium transition-all duration-200",
             active
               ? "border border-accent/30 bg-accent/15 text-fg font-semibold shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"
-              : "text-muted hover:text-fg hover:bg-white/[0.05]",
+              : "text-muted hover:text-fg hover:bg-raised/70",
           );
 
           return (
