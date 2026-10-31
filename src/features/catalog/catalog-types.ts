@@ -62,6 +62,7 @@ export type CatalogState<T> =
 
 export interface HomeCatalog {
   featured: Movie;
+  heroCandidates?: Movie[];
   picks: Movie[];
   genres: GenreKey[];
 }

@@ -1,4 +1,4 @@
-import { FEATURED_FIXTURE_ID, FIXTURE_MOVIES, type FixtureMovie } from "./catalog-fixtures";
+import { FIXTURE_MOVIES, type FixtureMovie } from "./catalog-fixtures";
 import { normalizeMovie, normalizeMovieList } from "./catalog-adapter";
 import {
   GENRE_KEYS,
@@ -44,6 +44,8 @@ const MOVIES_API_URL = `${MOVIES_API_ORIGIN}/api/v1/movies?page=1`;
 const FETCH_TIMEOUT_MS = 8000;
 const REVALIDATE_SECONDS = 300;
 
+export const APPLICATION_PAGE_SIZE = 15;
+
 /** Maps internal genre keys to exact API genre names for the genre-movies endpoint. */
 export const GENRE_KEY_TO_API_NAME: Record<GenreKey, string> = {
   action: "Action",
@@ -67,6 +69,66 @@ export const GENRE_KEY_TO_API_NAME: Record<GenreKey, string> = {
   war: "War",
   western: "Western",
 };
+
+/** Reverse lookup: maps lowercase API genre name to internal GenreKey. */
+export const API_NAME_TO_GENRE_KEY: Record<string, GenreKey> = Object.entries(
+  GENRE_KEY_TO_API_NAME,
+).reduce((acc, [key, name]) => {
+  acc[name.toLowerCase()] = key as GenreKey;
+  return acc;
+}, {} as Record<string, GenreKey>);
+
+/** Selects 4 to 6 distinct movie candidates suitable for the Hero Carousel. */
+export function getHeroCandidates(movies: Movie[]): Movie[] {
+  const seen = new Set<string>();
+  const candidates: Movie[] = [];
+
+  // First pass: prefer movies with backdrops
+  for (const movie of movies) {
+    if (movie.backdropUrl && !seen.has(movie.id)) {
+      seen.add(movie.id);
+      candidates.push(movie);
+      if (candidates.length === 6) return candidates;
+    }
+  }
+
+  // Second pass: fill up to 6 candidates with remaining movies
+  for (const movie of movies) {
+    if (!seen.has(movie.id)) {
+      seen.add(movie.id);
+      candidates.push(movie);
+      if (candidates.length === 6) break;
+    }
+  }
+
+  return candidates;
+}
+
+/** Pure pagination helper for in-memory lists (fixtures, test collections). */
+export function paginateItems<T>(
+  items: T[],
+  page: number,
+  pageSize: number = APPLICATION_PAGE_SIZE,
+): {
+  items: T[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+} {
+  const num = Number(page);
+  const safePage = Number.isFinite(num) && num >= 1 ? Math.floor(num) : 1;
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const start = (safePage - 1) * pageSize;
+  const sliced = start < total ? items.slice(start, start + pageSize) : [];
+  return {
+    items: sliced,
+    metadata: {
+      current_page: String(safePage),
+      per_page: String(pageSize),
+      page_count: String(totalPages),
+      total_count: String(total),
+    },
+  };
+}
 
 interface ApiResponse {
   data: unknown;
@@ -130,8 +192,9 @@ async function fetchLiveMovies(): Promise<{
 }
 
 function buildHomeCatalogFromApi(movies: Movie[]): CatalogState<HomeCatalog> {
-  const featured = movies[0];
-  const picks = movies.slice(1);
+  const heroCandidates = getHeroCandidates(movies);
+  const featured = heroCandidates[0] ?? movies[0];
+  const picks = movies;
 
   const present = new Set<string>(movies.flatMap((movie) => movie.genres));
   const genres = GENRE_KEYS.filter((key): key is GenreKey => present.has(key));
@@ -139,7 +202,7 @@ function buildHomeCatalogFromApi(movies: Movie[]): CatalogState<HomeCatalog> {
   return {
     status: "success",
     source: "api",
-    data: { featured, picks, genres },
+    data: { featured, heroCandidates, picks, genres },
   };
 }
 
@@ -155,7 +218,7 @@ function buildEmptyCatalogFromApi(): CatalogState<HomeCatalog> {
  * `scenario` exists so empty/error UI can be exercised in tests and previews.
  */
 export async function getHomeCatalog(
-  locale: CatalogLocale,
+  locale: CatalogLocale = "en",
   scenario: HomeScenario = "default",
 ): Promise<CatalogState<HomeCatalog>> {
   if (scenario === "error") return { status: "error", reason: "fixture-error-scenario" };
@@ -180,13 +243,10 @@ export async function getHomeCatalog(
     return buildHomeCatalogFromApi(movies);
   } catch {
     // Fallback to fixtures on failure (network, HTTP, parsing, malformed envelope)
-    const featuredFixture =
-      FIXTURE_MOVIES.find((movie) => movie.id === FEATURED_FIXTURE_ID) ?? FIXTURE_MOVIES[0];
-    if (!featuredFixture) return { status: "empty", source: "fixture" };
-
-    const picks = FIXTURE_MOVIES.filter((movie) => movie.id !== featuredFixture.id).map((movie) =>
-      fixtureToMovie(movie, locale),
-    );
+    const allFixtures = FIXTURE_MOVIES.map((movie) => fixtureToMovie(movie, locale));
+    const heroCandidates = getHeroCandidates(allFixtures);
+    const featured = heroCandidates[0] ?? allFixtures[0];
+    const picks = allFixtures.slice(0, APPLICATION_PAGE_SIZE);
 
     const present = new Set<string>(FIXTURE_MOVIES.flatMap((movie) => movie.genres));
     const genres = GENRE_KEYS.filter((key): key is GenreKey => present.has(key));
@@ -194,7 +254,7 @@ export async function getHomeCatalog(
     return {
       status: "success",
       source: "fixture",
-      data: { featured: fixtureToMovie(featuredFixture, locale), picks, genres },
+      data: { featured, heroCandidates, picks, genres },
     };
   }
 }
@@ -241,84 +301,32 @@ export async function getMovieByIdDirect(id: string): Promise<Movie> {
   return movie;
 }
 
-/**
- * Fetches a page of movies from the list endpoint:
- * GET /api/v1/movies?page={page}
- *
- * Returns normalized movies and pagination metadata.
- * Falls back to fixtures on any failure.
- */
-export async function getMoviesByPage(page: number): Promise<{
-  movies: Movie[];
-  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
-}> {
+/** Internal helper to fetch a single raw page from the API. */
+export async function fetchRawApiPage(
+  url: string,
+): Promise<{ movies: Movie[]; metadata: { current_page: number; per_page: number; page_count: number; total_count: number } }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
-    const response = await fetch(`${MOVIES_API_ORIGIN}/api/v1/movies?page=${page}`, {
-      next: { revalidate: REVALIDATE_SECONDS },
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType?.includes("application/json")) throw new Error("Non-JSON response");
-
-    const data = await response.json();
-    const apiResponse = data as ApiResponse;
-    if (
-      !apiResponse ||
-      typeof apiResponse !== "object" ||
-      !Array.isArray(apiResponse.data) ||
-      !apiResponse.metadata ||
-      typeof apiResponse.metadata !== "object"
-    ) {
-      throw new Error("Malformed response envelope");
-    }
-
-    return {
-      movies: normalizeMovieList(apiResponse.data),
-      metadata: {
-        current_page: String(apiResponse.metadata.current_page ?? "1"),
-        per_page: String(apiResponse.metadata.per_page ?? "12"),
-        page_count: String(apiResponse.metadata.page_count ?? "1"),
-        total_count: String(apiResponse.metadata.total_count ?? "0"),
-      },
-    };
-  } catch {
-    const movies = FIXTURE_MOVIES.map((movie) => fixtureToMovie(movie, "en"));
-    return {
-      movies,
-      metadata: { current_page: "1", per_page: "12", page_count: "1", total_count: String(movies.length) },
-    };
-  }
-}
-
-/**
- * Fetches movies of a specific genre from the genre endpoint:
- * GET /api/v1/genres/{genreName}/movies?page={page}
- *
- * `genreName` must be the exact API genre name (e.g. "Crime", "Drama"),
- * not the internal key. Throws MovieNotFoundError on HTTP 404.
- * Falls back to fixtures on other failures.
- */
-export async function getMoviesByGenre(genreName: string, page: number): Promise<{
-  movies: Movie[];
-  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
-}> {
-  try {
-    const encodedGenre = encodeURIComponent(genreName);
-    const url = `${MOVIES_API_ORIGIN}/api/v1/genres/${encodedGenre}/movies?page=${page}`;
-
     const response = await fetch(url, {
+      signal: controller.signal,
       next: { revalidate: REVALIDATE_SECONDS },
     });
+    clearTimeout(timeoutId);
 
     if (response.status === 404) {
       throw new MovieNotFoundError();
     }
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
 
     const contentType = response.headers.get("content-type");
-    if (!contentType?.includes("application/json")) throw new Error("Non-JSON response");
+    if (!contentType?.includes("application/json")) {
+      throw new Error("Non-JSON response");
+    }
 
     const data = await response.json();
     const apiResponse = data as ApiResponse;
@@ -332,18 +340,194 @@ export async function getMoviesByGenre(genreName: string, page: number): Promise
       throw new Error("Malformed response envelope");
     }
 
+    const perPage = Number(apiResponse.metadata.per_page) || 12;
+    const currentPage = Number(apiResponse.metadata.current_page) || 1;
+    const pageCount = Number(apiResponse.metadata.page_count) || 1;
+    const totalCount = Number(apiResponse.metadata.total_count) || 0;
+
     return {
       movies: normalizeMovieList(apiResponse.data),
       metadata: {
-        current_page: String(apiResponse.metadata.current_page ?? "1"),
-        per_page: String(apiResponse.metadata.per_page ?? "12"),
-        page_count: String(apiResponse.metadata.page_count ?? "1"),
-        total_count: String(apiResponse.metadata.total_count ?? "0"),
+        current_page: currentPage,
+        per_page: perPage,
+        page_count: pageCount,
+        total_count: totalCount,
       },
     };
-  } catch (err) {
-    throw err;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
+}
+
+/**
+ * Aggregates and slices raw API pages (e.g. 12 items/page) into logical 15-item application pages.
+ * Preserves API ordering, eliminates duplicate movie IDs, and handles final partial pages correctly.
+ */
+export async function fetchPaginatedMoviesFromApi(
+  baseUrl: string,
+  logicalPage: number,
+): Promise<{
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "api";
+}> {
+  const num = Number(logicalPage);
+  const safePage = Number.isFinite(num) && num >= 1 ? Math.floor(num) : 1;
+  const targetSize = APPLICATION_PAGE_SIZE;
+  const sep = baseUrl.includes("?") ? "&" : "?";
+
+  // Discover page size and total count from estimated first API page
+  const initialApiPage = Math.floor(((safePage - 1) * targetSize) / 12) + 1;
+  const firstRes = await fetchRawApiPage(`${baseUrl}${sep}page=${initialApiPage}`);
+
+  const apiPerPage = firstRes.metadata.per_page;
+  const totalCount = firstRes.metadata.total_count;
+  const logicalPageCount = Math.max(1, Math.ceil(totalCount / targetSize));
+
+  // If the API natively returns 15 items per page, map directly without aggregation
+  if (apiPerPage === targetSize) {
+    if (initialApiPage === safePage) {
+      return {
+        movies: firstRes.movies,
+        metadata: {
+          current_page: String(safePage),
+          per_page: String(targetSize),
+          page_count: String(logicalPageCount),
+          total_count: String(totalCount),
+        },
+        source: "api",
+      };
+    }
+    const directRes = await fetchRawApiPage(`${baseUrl}${sep}page=${safePage}`);
+    return {
+      movies: directRes.movies,
+      metadata: {
+        current_page: String(safePage),
+        per_page: String(targetSize),
+        page_count: String(logicalPageCount),
+        total_count: String(totalCount),
+      },
+      source: "api",
+    };
+  }
+
+  // Multi-API-page aggregation for logical 15-item application pages
+  const startIndex = (safePage - 1) * targetSize;
+  const endIndex = startIndex + targetSize - 1;
+
+  if (startIndex >= totalCount || totalCount === 0) {
+    return {
+      movies: [],
+      metadata: {
+        current_page: String(safePage),
+        per_page: String(targetSize),
+        page_count: String(logicalPageCount),
+        total_count: String(totalCount),
+      },
+      source: "api",
+    };
+  }
+
+  const pStart = Math.floor(startIndex / apiPerPage) + 1;
+  const pEnd = Math.floor(endIndex / apiPerPage) + 1;
+  const maxApiPage = Math.max(1, Math.ceil(totalCount / apiPerPage));
+  const clampedEnd = Math.min(pEnd, maxApiPage);
+
+  const neededPages: number[] = [];
+  for (let p = pStart; p <= clampedEnd; p++) {
+    neededPages.push(p);
+  }
+
+  const responses = await Promise.all(
+    neededPages.map((p) => {
+      if (p === initialApiPage) return Promise.resolve(firstRes);
+      return fetchRawApiPage(`${baseUrl}${sep}page=${p}`);
+    }),
+  );
+
+  const allMovies: Movie[] = [];
+  for (const res of responses) {
+    allMovies.push(...res.movies);
+  }
+
+  const offset = (pStart - 1) * apiPerPage;
+  const sliceStart = Math.max(0, startIndex - offset);
+  const sliceEnd = sliceStart + targetSize;
+  const rawSliced = allMovies.slice(sliceStart, sliceEnd);
+
+  // Preserve ordering while avoiding duplicate movie IDs
+  const seen = new Set<string>();
+  const movies: Movie[] = [];
+  for (const m of rawSliced) {
+    if (!seen.has(m.id)) {
+      seen.add(m.id);
+      movies.push(m);
+    }
+  }
+
+  return {
+    movies,
+    metadata: {
+      current_page: String(safePage),
+      per_page: String(targetSize),
+      page_count: String(logicalPageCount),
+      total_count: String(totalCount),
+    },
+    source: "api",
+  };
+}
+
+/**
+ * Fetches a logical 15-movie page from the list endpoint:
+ * GET /api/v1/movies?page={page}
+ *
+ * Uses multi-page aggregation when the API returns 12-item pages.
+ * Falls back to fixture pagination in the requested locale on failure.
+ */
+export async function getMoviesByPage(
+  page: number = 1,
+  locale: CatalogLocale = "en",
+): Promise<{
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "api" | "fixture";
+}> {
+  try {
+    return await fetchPaginatedMoviesFromApi(`${MOVIES_API_ORIGIN}/api/v1/movies`, page);
+  } catch {
+    const safePage = Math.max(1, page);
+    const fixtures = FIXTURE_MOVIES.map((movie) => fixtureToMovie(movie, locale));
+    const paginated = paginateItems(fixtures, safePage, APPLICATION_PAGE_SIZE);
+    return {
+      movies: paginated.items,
+      metadata: paginated.metadata,
+      source: "fixture",
+    };
+  }
+}
+
+/**
+ * Fetches a logical 15-movie page of a specific genre from the genre endpoint:
+ * GET /api/v1/genres/{genreName}/movies?page={page}
+ *
+ * Uses multi-page aggregation when the API returns 12-item pages.
+ * Throws MovieNotFoundError when the API returns HTTP 404 for an unknown genre.
+ * Falls back to genre-filtered fixtures in the requested locale on network failure.
+ */
+export async function getMoviesByGenre(
+  genreName: string,
+  page: number = 1,
+): Promise<{
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "api" | "fixture";
+}> {
+  const encodedGenre = encodeURIComponent(genreName);
+  return await fetchPaginatedMoviesFromApi(
+    `${MOVIES_API_ORIGIN}/api/v1/genres/${encodedGenre}/movies`,
+    page,
+  );
 }
 
 /** Backward-compatible wrapper: fetches the detail endpoint for a movie id. */

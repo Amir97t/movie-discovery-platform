@@ -84,7 +84,7 @@ test.describe("Discover page (live API)", () => {
     await expect(page.locator("text=Blade Runner 2049")).toBeVisible();
     await expect(page.locator("text=The Matrix")).toBeVisible();
     // Check for Sci-Fi genre in movie cards (translated via genres namespace)
-    await expect(page.locator("text=Sci-Fi").first()).toBeVisible();
+    await expect(page.locator("article").filter({ hasText: "Sci-Fi" }).first()).toBeVisible();
   });
 
   test("shows Previous and Next links reflecting pagination metadata", async ({ page }) => {
@@ -158,15 +158,26 @@ test.describe("Internal localized navigation", () => {
     expect(page.url()).not.toContain("/fa/fa");
   });
 
-  test("clicking Home genre opens Discover with genre query and page 1", async ({ page }) => {
+  test("clicking Home genre filters catalog on Home with genre query and page 1", async ({ page }) => {
     await page.goto("/en");
-    const scifiChip = page.locator("a:has-text('Sci-Fi')").first();
+    const scifiChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('Sci-Fi')").first();
+    await scifiChip.click();
+    await expect(page).toHaveURL(/\/en\?genre=scifi&page=1/);
+    await expect(page.locator("#picks")).toBeVisible();
+
+    const allChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('All')").first();
+    await allChip.click();
+    await expect(page).toHaveURL(/\/en\/?$/);
+  });
+
+  test("clicking Discover genre filters catalog on Discover with genre query and page 1", async ({ page }) => {
+    await page.goto("/en/discover?page=1");
+    const scifiChip = page.locator("section[aria-labelledby='discover-genres-title'] a:has-text('Sci-Fi')").first();
     await scifiChip.click();
     await expect(page).toHaveURL(/\/en\/discover\?genre=scifi&page=1/);
     await expect(page.locator("h1")).toHaveText("Discover");
 
-    await page.goto("/en");
-    const allChip = page.locator("a:has-text('All')").first();
+    const allChip = page.locator("section[aria-labelledby='discover-genres-title'] a:has-text('All')").first();
     await allChip.click();
     await expect(page).toHaveURL(/\/en\/discover\?page=1/);
   });
@@ -291,5 +302,75 @@ test.describe("Image loading and fallback behavior", () => {
     await expect(poster).toHaveClass(/aspect-\[2\/3\]/);
     const ratio = posterBox!.height / posterBox!.width;
     expect(ratio).toBeCloseTo(1.5, 1);
+  });
+});
+
+test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
+  test("Home catalog displays exactly 15 movie cards on desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en");
+
+    const cards = page.locator("#picks article");
+    await expect(cards).toHaveCount(15);
+  });
+
+  test("Discover catalog displays exactly 15 movie cards on page 1 and page 2 shows distinct IDs", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en/discover?page=1");
+
+    const page1Cards = page.locator("article");
+    await expect(page1Cards).toHaveCount(15);
+
+    // Navigate to page 2
+    const nextLink = page.locator("a:has-text('Next →')");
+    await expect(nextLink).toBeVisible();
+    await nextLink.click();
+
+    await expect(page).toHaveURL(/\/en\/discover\?page=2/);
+    const page2Cards = page.locator("article");
+    await expect(page2Cards).toHaveCount(15);
+  });
+
+  test("Hero Carousel allows manual previous and next navigation on Home", async ({ page }) => {
+    await page.goto("/en");
+
+    const hero = page.locator("section[aria-roledescription='carousel']");
+    await expect(hero).toBeVisible();
+
+    const initialTitle = await hero.locator("h2 a").innerText();
+    expect(initialTitle.trim()).not.toBe("");
+
+    // Click Next
+    const nextButton = hero.locator("button[aria-label*='Next']");
+    await nextButton.click();
+
+    // Active slide title should be non-empty
+    const newTitle = await hero.locator("h2 a").innerText();
+    expect(newTitle.trim()).not.toBe("");
+
+    // Clicking hero detail link navigates to movie page
+    const detailCta = hero.locator("a:has-text('View details')");
+    await detailCta.click();
+    await expect(page).toHaveURL(/\/en\/movies\/\d+$/);
+  });
+
+  test("Mobile filter drawer opens, displays genres, and closes on Escape", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/en");
+
+    const filterButton = page.locator("button:has-text('Filters')").first();
+    await expect(filterButton).toBeVisible();
+    await filterButton.click();
+
+    const drawer = page.locator("#mobile-genre-drawer");
+    await expect(drawer).toBeVisible();
+
+    // Press Escape
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
   });
 });

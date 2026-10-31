@@ -20,6 +20,17 @@ async function main() {
     }
   );
 
+  const cleanExit = () => {
+    if (nextServer.pid) {
+      try {
+        spawn("taskkill", ["/pid", String(nextServer.pid), "/f", "/t"]);
+      } catch {}
+    }
+    process.exit(0);
+  };
+  process.on("SIGINT", cleanExit);
+  process.on("SIGTERM", cleanExit);
+
   nextServer.on("exit", (code) => {
     process.exit(code || 0);
   });

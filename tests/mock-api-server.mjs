@@ -34,13 +34,13 @@ function generateMovie(id, title, genre) {
 const MOVIE_1 = generateMovie(1, "The Shawshank Redemption", "Drama");
 const MOVIE_250 = generateMovie(250, "Movie 250", "Drama");
 
-const ALL_MOVIES = Array.from({ length: 25 }, (_, i) => {
+const ALL_MOVIES = Array.from({ length: 35 }, (_, i) => {
   if (i === 0) return MOVIE_1;
-  if (i === 24) return MOVIE_250;
+  if (i === 34) return MOVIE_250;
   return generateMovie(i + 1, `Movie ${i + 1}`, i % 2 === 0 ? "Drama" : "Action");
 });
 
-// Sci-Fi movies: 13 total, so page 1 (per_page=12) has 12, page 2 has 1
+// Sci-Fi movies: 18 total (15 on page 1, 3 on page 2)
 const SCI_FI_MOVIES = [
   generateMovie(101, "Blade Runner 2049", "Sci-Fi"),
   generateMovie(102, "The Matrix", "Sci-Fi"),
@@ -54,7 +54,12 @@ const SCI_FI_MOVIES = [
   generateMovie(110, "The Fifth Element", "Sci-Fi"),
   generateMovie(111, "Back to the Future", "Sci-Fi"),
   generateMovie(112, "E.T. the Extra-Terrestrial", "Sci-Fi"),
-  generateMovie(113, "Close Encounters of the Third Kind", "Sci-Fi"),
+  generateMovie(113, "Arrival", "Sci-Fi"),
+  generateMovie(114, "Dune", "Sci-Fi"),
+  generateMovie(115, "Solaris", "Sci-Fi"),
+  generateMovie(116, "Close Encounters of the Third Kind", "Sci-Fi"),
+  generateMovie(117, "2001: A Space Odyssey", "Sci-Fi"),
+  generateMovie(118, "Gravity", "Sci-Fi"),
 ];
 
 // Crime movies: 2 total
@@ -121,7 +126,10 @@ function createServer() {
         jsonResponse(res, 500, { error: "Internal server error" });
         return;
       }
-      const found = ALL_MOVIES.find((m) => m.id === id);
+      const found =
+        ALL_MOVIES.find((m) => m.id === id) ||
+        SCI_FI_MOVIES.find((m) => m.id === id) ||
+        CRIME_MOVIES.find((m) => m.id === id);
       if (found) {
         jsonResponse(res, 200, found);
         return;

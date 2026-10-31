@@ -1,14 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { FIXTURE_MOVIES } from "./catalog-fixtures";
 import {
+  APPLICATION_PAGE_SIZE,
+  fetchPaginatedMoviesFromApi,
   GENRE_KEY_TO_API_NAME,
   getAllMovies,
+  getHeroCandidates,
   getHomeCatalog,
   getMovieById,
   getMovieByIdDirect,
   getMoviesByGenre,
   getMoviesByPage,
   MovieNotFoundError,
+  paginateItems,
 } from "./catalog-service";
 import type { CatalogState } from "./catalog-types";
 
@@ -120,13 +124,13 @@ describe("getHomeCatalog", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns a featured movie, picks without it, and used genres, per locale", async () => {
+  it("returns a featured movie, picks containing all movies, and used genres, per locale", async () => {
     for (const locale of ["en", "fa"] as const) {
       const state = await getHomeCatalog(locale);
       expect(state.status).toBe("success");
       if (!isSuccessState(state)) return;
       expect(["fixture", "api"]).toContain(state.source);
-      expect(state.data.picks.some((m) => m.id === state.data.featured.id)).toBe(false);
+      expect(state.data.picks.some((m) => m.id === state.data.featured.id)).toBe(true);
       expect(state.data.picks.length).toBeGreaterThan(0);
       expect(state.data.genres.length).toBeGreaterThan(0);
     }
@@ -152,7 +156,7 @@ describe("getHomeCatalog", () => {
       expect(isSuccessState(state) && state.data.featured.genres).toContain("action");
       expect(isSuccessState(state) && state.data.featured.genres).toContain("drama");
       expect(isSuccessState(state) && state.data.featured.synopsis).toBe("A test movie plot.");
-      expect(isSuccessState(state) && state.data.picks.length).toBe(0);
+      expect(isSuccessState(state) && state.data.picks.length).toBe(1);
     });
 
     it("valid empty response with data: [] and total_count: 0 returns API-backed empty state", async () => {
@@ -633,7 +637,7 @@ describe("getMoviesByPage", () => {
   it("fetches the movie-list endpoint with the requested page", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(
-      createMockResponse([mockMovie], { current_page: "3", per_page: "12", page_count: "21", total_count: "250" }),
+      createMockResponse([mockMovie], { current_page: "3", per_page: "15", page_count: "17", total_count: "250" }),
     );
 
     const result = await getMoviesByPage(3);
@@ -649,8 +653,8 @@ describe("getMoviesByPage", () => {
 
   it("invalid page parameters default to page 1", async () => {
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValueOnce(
-      createMockResponse([mockMovie], { current_page: "1", per_page: "12", page_count: "1", total_count: "1" }),
+    fetchMock.mockResolvedValue(
+      createMockResponse([mockMovie], { current_page: "1", per_page: "15", page_count: "1", total_count: "1" }),
     );
 
     const result = await getMoviesByPage(0);
@@ -678,7 +682,7 @@ describe("getMoviesByGenre", () => {
   it("uses the exact API genre name and URL-encodes it", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(
-      createMockResponse([mockMovie], { current_page: "1", per_page: "12", page_count: "9", total_count: "51" }),
+      createMockResponse([mockMovie], { current_page: "1", per_page: "15", page_count: "4", total_count: "51" }),
     );
 
     const result = await getMoviesByGenre("Crime", 1);
@@ -696,14 +700,14 @@ describe("getMoviesByGenre", () => {
     fetchMock.mockResolvedValueOnce(
       createMockResponse(
         [mockMovie, { ...mockMovie, id: 2, title: "Second Crime Movie" }],
-        { current_page: "2", per_page: "12", page_count: "5", total_count: "51" },
+        { current_page: "2", per_page: "15", page_count: "4", total_count: "51" },
       ),
     );
 
     const result = await getMoviesByGenre("Crime", 2);
 
     expect(result.metadata.current_page).toBe("2");
-    expect(result.metadata.page_count).toBe("5");
+    expect(result.metadata.page_count).toBe("4");
     expect(result.metadata.total_count).toBe("51");
     expect(result.movies).toHaveLength(2);
   });
@@ -758,5 +762,243 @@ describe("getMoviesByGenre", () => {
     fetchMock.mockResolvedValueOnce(createMockErrorResponse(500));
 
     await expect(getMoviesByGenre("Crime", 1)).rejects.toThrow(Error);
+  });
+});
+
+describe("Phase 2 - 15-movie pagination and hero candidates", () => {
+  it("APPLICATION_PAGE_SIZE is 15", () => {
+    expect(APPLICATION_PAGE_SIZE).toBe(15);
+  });
+
+  describe("getHeroCandidates", () => {
+    it("selects distinct movies with backdrops when available", () => {
+      const candidates = getHeroCandidates(FIXTURE_MOVIES.map((m, idx) => ({
+        id: String(idx + 1),
+        title: `Movie ${idx + 1}`,
+        year: 2024,
+        rating: 8.5,
+        runtimeMinutes: 120,
+        genres: ["action" as const],
+        synopsis: "Synopsis",
+        posterUrl: null,
+        backdropUrl: idx % 2 === 0 ? `https://example.com/backdrop-${idx}.jpg` : null,
+        art: ["#000", "#fff"] as [string, string],
+        director: null,
+        actors: null,
+        country: null,
+        imdb_id: null,
+        imdb_rating: null,
+        website: null,
+      })));
+
+      expect(candidates.length).toBeGreaterThanOrEqual(2);
+      expect(candidates.length).toBeLessThanOrEqual(6);
+      const ids = new Set(candidates.map((c) => c.id));
+      expect(ids.size).toBe(candidates.length);
+      // First candidate should have a backdrop
+      expect(candidates[0].backdropUrl).not.toBeNull();
+    });
+
+    it("does not crash with fewer than 2 movies", () => {
+      const single = [{
+        id: "1",
+        title: "Single Movie",
+        year: 2024,
+        rating: 8.0,
+        runtimeMinutes: 100,
+        genres: ["drama" as const],
+        synopsis: null,
+        posterUrl: null,
+        backdropUrl: null,
+        art: ["#000", "#fff"] as [string, string],
+        director: null,
+        actors: null,
+        country: null,
+        imdb_id: null,
+        imdb_rating: null,
+        website: null,
+      }];
+      const candidates = getHeroCandidates(single);
+      expect(candidates).toHaveLength(1);
+      expect(candidates[0].id).toBe("1");
+    });
+  });
+
+  describe("paginateItems", () => {
+    const items = Array.from({ length: 35 }, (_, i) => ({ id: `item-${i + 1}`, num: i + 1 }));
+
+    it("paginates page 1 with 15 items and correct metadata", () => {
+      const page1 = paginateItems(items, 1, 15);
+      expect(page1.items).toHaveLength(15);
+      expect(page1.items[0].id).toBe("item-1");
+      expect(page1.items[14].id).toBe("item-15");
+      expect(page1.metadata).toEqual({
+        current_page: "1",
+        per_page: "15",
+        page_count: "3",
+        total_count: "35",
+      });
+    });
+
+    it("paginates page 2 with 15 items with distinct IDs", () => {
+      const page1 = paginateItems(items, 1, 15);
+      const page2 = paginateItems(items, 2, 15);
+      expect(page2.items).toHaveLength(15);
+      expect(page2.items[0].id).toBe("item-16");
+      expect(page2.items[14].id).toBe("item-30");
+
+      const p1Ids = new Set(page1.items.map((i) => i.id));
+      const p2Ids = new Set(page2.items.map((i) => i.id));
+      for (const id of p2Ids) {
+        expect(p1Ids.has(id)).toBe(false);
+      }
+    });
+
+    it("paginates partial final page (page 3) correctly", () => {
+      const page3 = paginateItems(items, 3, 15);
+      expect(page3.items).toHaveLength(5);
+      expect(page3.items[0].id).toBe("item-31");
+      expect(page3.items[4].id).toBe("item-35");
+      expect(page3.metadata.current_page).toBe("3");
+      expect(page3.metadata.page_count).toBe("3");
+    });
+
+    it("handles out of bounds page by returning empty list", () => {
+      const page4 = paginateItems(items, 4, 15);
+      expect(page4.items).toHaveLength(0);
+      expect(page4.metadata.current_page).toBe("4");
+      expect(page4.metadata.total_count).toBe("35");
+    });
+  });
+
+  describe("fetchPaginatedMoviesFromApi (Multi-page aggregation)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("aggregates two 12-item API pages into one 15-item application page", async () => {
+      const fetchMock = vi.mocked(fetch);
+
+      // API Page 1: movies 1..12
+      const apiPage1 = Array.from({ length: 12 }, (_, i) => ({
+        ...mockMovie,
+        id: i + 1,
+        title: `Movie ${i + 1}`,
+      }));
+      // API Page 2: movies 13..24
+      const apiPage2 = Array.from({ length: 12 }, (_, i) => ({
+        ...mockMovie,
+        id: i + 13,
+        title: `Movie ${i + 13}`,
+      }));
+
+      fetchMock.mockImplementation((url) => {
+        const urlStr = String(url);
+        if (urlStr.includes("page=1")) {
+          return Promise.resolve(createMockResponse(apiPage1, {
+            current_page: 1,
+            per_page: 12,
+            page_count: 3,
+            total_count: 30,
+          }));
+        }
+        if (urlStr.includes("page=2")) {
+          return Promise.resolve(createMockResponse(apiPage2, {
+            current_page: 2,
+            per_page: 12,
+            page_count: 3,
+            total_count: 30,
+          }));
+        }
+        return Promise.reject(new Error("Unexpected page"));
+      });
+
+      const result = await fetchPaginatedMoviesFromApi("https://moviesapi.codingfront.dev/api/v1/movies", 1);
+
+      expect(result.movies).toHaveLength(15);
+      expect(result.movies[0].id).toBe("1");
+      expect(result.movies[11].id).toBe("12");
+      expect(result.movies[12].id).toBe("13");
+      expect(result.movies[14].id).toBe("15");
+      expect(result.metadata.per_page).toBe("15");
+      expect(result.metadata.page_count).toBe("2"); // 30 total / 15 per page = 2
+      expect(result.metadata.total_count).toBe("30");
+
+      // Verify no duplicate IDs
+      const ids = new Set(result.movies.map((m) => m.id));
+      expect(ids.size).toBe(15);
+    });
+
+    it("handles native 15-item API pages directly without extra requests", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const apiPage = Array.from({ length: 15 }, (_, i) => ({
+        ...mockMovie,
+        id: i + 1,
+        title: `Native Movie ${i + 1}`,
+      }));
+
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(apiPage, {
+          current_page: 1,
+          per_page: 15,
+          page_count: 2,
+          total_count: 30,
+        }),
+      );
+
+      const result = await fetchPaginatedMoviesFromApi("https://moviesapi.codingfront.dev/api/v1/movies", 1);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(result.movies).toHaveLength(15);
+      expect(result.metadata.per_page).toBe("15");
+      expect(result.metadata.page_count).toBe("2");
+    });
+  });
+
+  describe("Fixture pagination fallback", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("returns 15 items on page 1 and remaining items on page 2 in Persian locale", async () => {
+      // getMoviesByPage falls back to fixtures on network error
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockRejectedValue(new TypeError("Network down"));
+
+      const page1 = await getMoviesByPage(1, "fa");
+      expect(page1.source).toBe("fixture");
+      expect(page1.movies).toHaveLength(15);
+      expect(page1.metadata.per_page).toBe("15");
+      expect(page1.metadata.page_count).toBe("2"); // 25 fixtures / 15 = 2 pages
+
+      const page2 = await getMoviesByPage(2, "fa");
+      expect(page2.source).toBe("fixture");
+      expect(page2.movies).toHaveLength(10); // 25 - 15 = 10
+      expect(page2.metadata.current_page).toBe("2");
+
+      // Verify distinct movie IDs between page 1 and page 2
+      const p1Ids = new Set(page1.movies.map((m) => m.id));
+      const p2Ids = new Set(page2.movies.map((m) => m.id));
+      for (const id of p2Ids) {
+        expect(p1Ids.has(id)).toBe(false);
+      }
+
+      // Check Persian titles are non-empty
+      for (const movie of page1.movies) {
+        expect(movie.title.trim()).not.toBe("");
+      }
+    });
   });
 });
