@@ -78,13 +78,15 @@ export const API_NAME_TO_GENRE_KEY: Record<string, GenreKey> = Object.entries(
   return acc;
 }, {} as Record<string, GenreKey>);
 
-/** Selects 4 to 6 distinct movie candidates suitable for the Hero Carousel. */
+/** Selects 4 to 6 distinct movie candidates suitable for the Hero Carousel, ranked by rating. */
 export function getHeroCandidates(movies: Movie[]): Movie[] {
+  // Sort movies by rating descending (highest rating first)
+  const sorted = [...movies].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
   const seen = new Set<string>();
   const candidates: Movie[] = [];
 
-  // First pass: prefer movies with backdrops
-  for (const movie of movies) {
+  // First pass: prefer movies with backdrops among highest rated
+  for (const movie of sorted) {
     if (movie.backdropUrl && !seen.has(movie.id)) {
       seen.add(movie.id);
       candidates.push(movie);
@@ -92,8 +94,8 @@ export function getHeroCandidates(movies: Movie[]): Movie[] {
     }
   }
 
-  // Second pass: fill up to 6 candidates with remaining movies
-  for (const movie of movies) {
+  // Second pass: fill up to 6 candidates with remaining top-rated movies
+  for (const movie of sorted) {
     if (!seen.has(movie.id)) {
       seen.add(movie.id);
       candidates.push(movie);
@@ -102,6 +104,34 @@ export function getHeroCandidates(movies: Movie[]): Movie[] {
   }
 
   return candidates;
+}
+
+/** Pure Fisher-Yates shuffle to randomize candidate presentation order. */
+export function shuffleCandidates<T>(items: readonly T[]): T[] {
+  const array = [...items];
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = array[i]!;
+    array[i] = array[j]!;
+    array[j] = temp;
+  }
+  return array;
+}
+
+/** Maps any casing or variant of a genre name to internal GenreKey. */
+export function resolveGenreKey(genreName: string): GenreKey | undefined {
+  const trimmed = genreName.trim();
+  const lower = trimmed.toLowerCase();
+  if (API_NAME_TO_GENRE_KEY[lower]) {
+    return API_NAME_TO_GENRE_KEY[lower];
+  }
+  if ((GENRE_KEYS as readonly string[]).includes(lower)) {
+    return lower as GenreKey;
+  }
+  if ((GENRE_KEYS as readonly string[]).includes(trimmed)) {
+    return trimmed as GenreKey;
+  }
+  return undefined;
 }
 
 /** Pure pagination helper for in-memory lists (fixtures, test collections). */
@@ -246,7 +276,7 @@ export async function getHomeCatalog(
     const allFixtures = FIXTURE_MOVIES.map((movie) => fixtureToMovie(movie, locale));
     const heroCandidates = getHeroCandidates(allFixtures);
     const featured = heroCandidates[0] ?? allFixtures[0];
-    const picks = allFixtures.slice(0, APPLICATION_PAGE_SIZE);
+    const picks = allFixtures;
 
     const present = new Set<string>(FIXTURE_MOVIES.flatMap((movie) => movie.genres));
     const genres = GENRE_KEYS.filter((key): key is GenreKey => present.has(key));
@@ -360,6 +390,12 @@ export async function fetchRawApiPage(
   }
 }
 
+const apiMetadataCache = new Map<string, { perPage: number; totalCount: number }>();
+
+export function clearApiMetadataCache(): void {
+  apiMetadataCache.clear();
+}
+
 /**
  * Aggregates and slices raw API pages (e.g. 12 items/page) into logical 15-item application pages.
  * Preserves API ordering, eliminates duplicate movie IDs, and handles final partial pages correctly.
@@ -377,36 +413,82 @@ export async function fetchPaginatedMoviesFromApi(
   const targetSize = APPLICATION_PAGE_SIZE;
   const sep = baseUrl.includes("?") ? "&" : "?";
 
-  // Discover page size and total count from estimated first API page
-  const initialApiPage = Math.floor(((safePage - 1) * targetSize) / 12) + 1;
-  const firstRes = await fetchRawApiPage(`${baseUrl}${sep}page=${initialApiPage}`);
+  // Discover actual per_page and total_count from a reliable metadata request
+  const cachedMeta = apiMetadataCache.get(baseUrl);
+  const initialApiPage = cachedMeta
+    ? Math.floor(((safePage - 1) * targetSize) / cachedMeta.perPage) + 1
+    : safePage;
 
-  const apiPerPage = firstRes.metadata.per_page;
-  const totalCount = firstRes.metadata.total_count;
+  const firstRes = await fetchRawApiPage(`${baseUrl}${sep}page=${initialApiPage}`);
+  const rawPerPage = Number(firstRes.metadata.per_page);
+  const rawTotal = Number(firstRes.metadata.total_count);
+
+  if (
+    !Number.isInteger(rawPerPage) ||
+    rawPerPage <= 0 ||
+    !Number.isInteger(rawTotal) ||
+    rawTotal < 0
+  ) {
+    throw new Error("Invalid pagination metadata");
+  }
+
+  const apiPerPage = rawPerPage;
+  const totalCount = rawTotal;
+  apiMetadataCache.set(baseUrl, { perPage: apiPerPage, totalCount });
+
   const logicalPageCount = Math.max(1, Math.ceil(totalCount / targetSize));
 
   // If the API natively returns 15 items per page, map directly without aggregation
   if (apiPerPage === targetSize) {
-    if (initialApiPage === safePage) {
+    const directRes =
+      initialApiPage === safePage
+        ? firstRes
+        : await fetchRawApiPage(`${baseUrl}${sep}page=${safePage}`);
+
+    const rawTotal = Number(directRes.metadata.total_count);
+    const currentTotal = Number.isInteger(rawTotal) && rawTotal >= 0 ? rawTotal : totalCount;
+    const startIndex = (safePage - 1) * targetSize;
+
+    if (startIndex >= currentTotal || currentTotal === 0) {
       return {
-        movies: firstRes.movies,
+        movies: [],
         metadata: {
           current_page: String(safePage),
           per_page: String(targetSize),
-          page_count: String(logicalPageCount),
-          total_count: String(totalCount),
+          page_count: String(Math.max(1, Math.ceil(currentTotal / targetSize))),
+          total_count: String(currentTotal),
         },
         source: "api",
       };
     }
-    const directRes = await fetchRawApiPage(`${baseUrl}${sep}page=${safePage}`);
+
+    // Deduplicate in encounter order
+    const seen = new Set<string>();
+    let hadDuplicates = false;
+    const movies: Movie[] = [];
+    for (const m of directRes.movies) {
+      if (seen.has(m.id)) {
+        hadDuplicates = true;
+      } else {
+        seen.add(m.id);
+        movies.push(m);
+      }
+    }
+
+    const expectedCount = Math.min(targetSize, Math.max(0, currentTotal - startIndex));
+    if (hadDuplicates && movies.length < expectedCount) {
+      throw new Error(
+        `Inconsistent upstream records: expected ${expectedCount} unique movies, received ${movies.length}`,
+      );
+    }
+
     return {
-      movies: directRes.movies,
+      movies,
       metadata: {
         current_page: String(safePage),
         per_page: String(targetSize),
-        page_count: String(logicalPageCount),
-        total_count: String(totalCount),
+        page_count: String(Math.max(1, Math.ceil(currentTotal / targetSize))),
+        total_count: String(currentTotal),
       },
       source: "api",
     };
@@ -451,19 +533,45 @@ export async function fetchPaginatedMoviesFromApi(
     allMovies.push(...res.movies);
   }
 
+  // Deduplicate all movies collected so far in encounter order
+  const seen = new Set<string>();
+  let hadDuplicates = false;
+  const uniqueMovies: Movie[] = [];
+  for (const m of allMovies) {
+    if (seen.has(m.id)) {
+      hadDuplicates = true;
+    } else {
+      seen.add(m.id);
+      uniqueMovies.push(m);
+    }
+  }
+
   const offset = (pStart - 1) * apiPerPage;
   const sliceStart = Math.max(0, startIndex - offset);
-  const sliceEnd = sliceStart + targetSize;
-  const rawSliced = allMovies.slice(sliceStart, sliceEnd);
 
-  // Preserve ordering while avoiding duplicate movie IDs
-  const seen = new Set<string>();
-  const movies: Movie[] = [];
-  for (const m of rawSliced) {
-    if (!seen.has(m.id)) {
-      seen.add(m.id);
-      movies.push(m);
+  // If duplicates across API pages resulted in fewer unique items than needed,
+  // fetch subsequent API pages to satisfy the logical page if more pages exist
+  let currentEnd = clampedEnd;
+  while (uniqueMovies.length < sliceStart + targetSize && currentEnd < maxApiPage) {
+    currentEnd++;
+    const nextRes = await fetchRawApiPage(`${baseUrl}${sep}page=${currentEnd}`);
+    for (const m of nextRes.movies) {
+      if (seen.has(m.id)) {
+        hadDuplicates = true;
+      } else {
+        seen.add(m.id);
+        uniqueMovies.push(m);
+      }
     }
+  }
+
+  const movies = uniqueMovies.slice(sliceStart, sliceStart + targetSize);
+  const expectedCount = Math.min(targetSize, Math.max(0, totalCount - startIndex));
+
+  if (hadDuplicates && movies.length < expectedCount) {
+    throw new Error(
+      `Inconsistent upstream records: expected ${expectedCount} unique movies, received ${movies.length}`,
+    );
   }
 
   return {
@@ -512,22 +620,49 @@ export async function getMoviesByPage(
  * GET /api/v1/genres/{genreName}/movies?page={page}
  *
  * Uses multi-page aggregation when the API returns 12-item pages.
- * Throws MovieNotFoundError when the API returns HTTP 404 for an unknown genre.
- * Falls back to genre-filtered fixtures in the requested locale on network failure.
+ * Throws MovieNotFoundError when the API returns HTTP 404 or for unknown genres.
+ * Falls back to genre-filtered fixtures in the requested locale on network failure, 5xx, or malformed data.
  */
 export async function getMoviesByGenre(
   genreName: string,
   page: number = 1,
+  locale: CatalogLocale = "en",
 ): Promise<{
   movies: Movie[];
   metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
   source: "api" | "fixture";
 }> {
-  const encodedGenre = encodeURIComponent(genreName);
-  return await fetchPaginatedMoviesFromApi(
-    `${MOVIES_API_ORIGIN}/api/v1/genres/${encodedGenre}/movies`,
-    page,
-  );
+  const genreKey = resolveGenreKey(genreName);
+  if (!genreKey) {
+    throw new MovieNotFoundError();
+  }
+
+  const apiGenreName = GENRE_KEY_TO_API_NAME[genreKey] ?? genreName;
+  const encodedGenre = encodeURIComponent(apiGenreName);
+
+  try {
+    return await fetchPaginatedMoviesFromApi(
+      `${MOVIES_API_ORIGIN}/api/v1/genres/${encodedGenre}/movies`,
+      page,
+    );
+  } catch (error) {
+    if (error instanceof MovieNotFoundError) {
+      throw error;
+    }
+
+    // On network errors, timeouts, HTTP 5xx, malformed responses, or invalid API metadata,
+    // return fixture movies filtered to that genre in the requested locale.
+    const safePage = Math.max(1, page);
+    const matchingFixtures = FIXTURE_MOVIES.filter((m) => m.genres.includes(genreKey));
+    const localized = matchingFixtures.map((m) => fixtureToMovie(m, locale));
+    const paginated = paginateItems(localized, safePage, APPLICATION_PAGE_SIZE);
+
+    return {
+      movies: paginated.items,
+      metadata: paginated.metadata,
+      source: "fixture",
+    };
+  }
 }
 
 /** Backward-compatible wrapper: fetches the detail endpoint for a movie id. */

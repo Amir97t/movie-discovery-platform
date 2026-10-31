@@ -38,6 +38,8 @@
     "carouselPlay": "شروع چرخش خودکار",
     "carouselPause": "توقف چرخش خودکار",
     "carouselSlide": "رفتن به اسلاید {number}",
+    "carouselRegion": "گردونه فیلم‌های برگزیده",
+    "carouselSlideLabel": "{current} از {total}: {title}",
     "viewDetails": "مشاهده جزئیات",
     "allMovies": "همه فیلم‌ها",
     "previous": "قبلی",

@@ -61,7 +61,7 @@ export default async function DiscoverPage({
     try {
       if (selectedGenreKey && isKnownGenre) {
         const apiGenreName = GENRE_KEY_TO_API_NAME[selectedGenreKey as GenreKey];
-        result = await getMoviesByGenre(apiGenreName, page);
+        result = await getMoviesByGenre(apiGenreName, page, locale);
       } else {
         result = await getMoviesByPage(page, locale);
       }

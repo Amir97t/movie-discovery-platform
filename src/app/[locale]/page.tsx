@@ -14,6 +14,7 @@ import {
   getMoviesByGenre,
   getMoviesByPage,
   MovieNotFoundError,
+  shuffleCandidates,
 } from "@/features/catalog/catalog-service";
 import { GENRE_KEYS, type GenreKey, type Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
@@ -47,14 +48,15 @@ export default async function HomePage({
   const tg = await getTranslations({ locale, namespace: "genres" });
   const te = await getTranslations({ locale, namespace: "states" });
 
-  // 1. Fetch stable Hero candidates
+  // 1. Fetch stable Hero candidates and randomize order per server request
   const homeCatalog = await getHomeCatalog(locale);
-  const heroCandidates =
+  const rawCandidates =
     homeCatalog.status === "success"
       ? homeCatalog.data.heroCandidates && homeCatalog.data.heroCandidates.length > 0
         ? homeCatalog.data.heroCandidates
         : [homeCatalog.data.featured]
       : [];
+  const heroCandidates = shuffleCandidates(rawCandidates);
 
   // 2. Fetch paginated catalog grid (15 items per page)
   let result:
@@ -73,7 +75,7 @@ export default async function HomePage({
     try {
       if (selectedGenreKey && isKnownGenre) {
         const apiGenreName = GENRE_KEY_TO_API_NAME[selectedGenreKey as GenreKey];
-        result = await getMoviesByGenre(apiGenreName, page);
+        result = await getMoviesByGenre(apiGenreName, page, locale);
       } else {
         result = await getMoviesByPage(page, locale);
       }

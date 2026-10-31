@@ -318,12 +318,25 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await expect(cards).toHaveCount(15);
   });
 
-  test("Discover catalog displays exactly 15 movie cards on page 1 and page 2 shows distinct IDs", async ({ page }) => {
+  test("Discover catalog displays 15 cards on page 1, 15 distinct cards on page 2, and 5 cards on final partial page", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en/discover?page=1");
 
-    const page1Cards = page.locator("article");
-    await expect(page1Cards).toHaveCount(15);
+    const page1Articles = page.locator("article");
+    await expect(page1Articles).toHaveCount(15);
+
+    // Collect all movie IDs from page 1
+    const p1Count = await page1Articles.count();
+    const p1Ids: string[] = [];
+    for (let i = 0; i < p1Count; i++) {
+      const href = await page1Articles.nth(i).locator("a[href*='/movies/']").first().getAttribute("href");
+      if (href) {
+        const match = href.match(/\/movies\/([^/?#]+)/);
+        if (match) p1Ids.push(match[1]);
+      }
+    }
+    expect(p1Ids).toHaveLength(15);
+    expect(new Set(p1Ids).size).toBe(15);
 
     // Navigate to page 2
     const nextLink = page.locator("a:has-text('Next →')");
@@ -331,46 +344,168 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await nextLink.click();
 
     await expect(page).toHaveURL(/\/en\/discover\?page=2/);
-    const page2Cards = page.locator("article");
-    await expect(page2Cards).toHaveCount(15);
+    const page2Articles = page.locator("article");
+    await expect(page2Articles).toHaveCount(15);
+
+    // Collect all movie IDs from page 2
+    const p2Count = await page2Articles.count();
+    const p2Ids: string[] = [];
+    for (let i = 0; i < p2Count; i++) {
+      const href = await page2Articles.nth(i).locator("a[href*='/movies/']").first().getAttribute("href");
+      if (href) {
+        const match = href.match(/\/movies\/([^/?#]+)/);
+        if (match) p2Ids.push(match[1]);
+      }
+    }
+    expect(p2Ids).toHaveLength(15);
+    expect(new Set(p2Ids).size).toBe(15);
+
+    // Verify ZERO overlap between page 1 and page 2
+    for (const id of p2Ids) {
+      expect(p1Ids).not.toContain(id);
+    }
+
+    // Navigate to page 3 (final partial page, 35 total movies -> 5 items)
+    const page2NextLink = page.locator("a:has-text('Next →')");
+    await expect(page2NextLink).toBeVisible();
+    await page2NextLink.click();
+
+    await expect(page).toHaveURL(/\/en\/discover\?page=3/);
+    const page3Articles = page.locator("article");
+    await expect(page3Articles).toHaveCount(5);
+
+    const p3Count = await page3Articles.count();
+    const p3Ids: string[] = [];
+    for (let i = 0; i < p3Count; i++) {
+      const href = await page3Articles.nth(i).locator("a[href*='/movies/']").first().getAttribute("href");
+      if (href) {
+        const match = href.match(/\/movies\/([^/?#]+)/);
+        if (match) p3Ids.push(match[1]);
+      }
+    }
+    expect(p3Ids).toHaveLength(5);
+    expect(new Set(p3Ids).size).toBe(5);
+
+    // Verify ZERO overlap with page 1 or page 2
+    for (const id of p3Ids) {
+      expect(p1Ids).not.toContain(id);
+      expect(p2Ids).not.toContain(id);
+    }
   });
 
-  test("Hero Carousel allows manual previous and next navigation on Home", async ({ page }) => {
+  test("Home preserves genre filter and locale during pagination", async ({ page }) => {
+    await page.goto("/fa?genre=crime&page=1");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    const nextLink = page.locator("a:has-text('بعدی →')");
+    if (await nextLink.isVisible()) {
+      await nextLink.click();
+      await expect(page).toHaveURL(/\/fa\?genre=crime&page=2/);
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    }
+  });
+
+  test("Hero Carousel Next button changes active movie and synchronizes detail navigation CTA", async ({ page }) => {
     await page.goto("/en");
 
     const hero = page.locator("section[aria-roledescription='carousel']");
     await expect(hero).toBeVisible();
 
-    const initialTitle = await hero.locator("h2 a").innerText();
-    expect(initialTitle.trim()).not.toBe("");
+    const titleLink = hero.locator("h2 a");
+    const initialTitle = (await titleLink.innerText()).trim();
+    expect(initialTitle).not.toBe("");
+
+    const initialHref = await titleLink.getAttribute("href");
+    const initialCtaHref = await hero.locator("a:has-text('View details')").getAttribute("href");
+    expect(initialCtaHref).toBe(initialHref);
 
     // Click Next
     const nextButton = hero.locator("button[aria-label*='Next']");
     await nextButton.click();
 
-    // Active slide title should be non-empty
-    const newTitle = await hero.locator("h2 a").innerText();
-    expect(newTitle.trim()).not.toBe("");
+    // Active title must actually change to a different movie
+    await expect(titleLink).not.toHaveText(initialTitle);
 
-    // Clicking hero detail link navigates to movie page
+    const newTitle = (await titleLink.innerText()).trim();
+    const newHref = await titleLink.getAttribute("href");
+    const newCtaHref = await hero.locator("a:has-text('View details')").getAttribute("href");
+
+    expect(newTitle).not.toBe(initialTitle);
+    expect(newHref).not.toBe(initialHref);
+    expect(newCtaHref).toBe(newHref);
+
+    // Clicking detail CTA navigates to that exact movie ID
     const detailCta = hero.locator("a:has-text('View details')");
     await detailCta.click();
-    await expect(page).toHaveURL(/\/en\/movies\/\d+$/);
+    await expect(page).toHaveURL(new RegExp(newHref + "$"));
+    await expect(page.locator("h1")).toBeVisible();
   });
 
-  test("Mobile filter drawer opens, displays genres, and closes on Escape", async ({ page }) => {
+  test("Mobile filter drawer focus trap: initial focus, Tab cycling, Shift+Tab, and Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/en");
 
-    const filterButton = page.locator("button:has-text('Filters')").first();
+    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
     await expect(filterButton).toBeVisible();
     await filterButton.click();
 
     const drawer = page.locator("#mobile-genre-drawer");
     await expect(drawer).toBeVisible();
 
-    // Press Escape
+    // 1. Initial focus: close button must be focused
+    const closeBtn = drawer.locator("button[aria-label*='Close']");
+    await expect(closeBtn).toBeFocused();
+
+    // 2. Tab from final focusable item cycles to first
+    const drawerLinks = drawer.locator("a");
+    const lastLink = drawerLinks.last();
+    await lastLink.focus();
+    await expect(lastLink).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    await expect(closeBtn).toBeFocused();
+
+    // 3. Shift+Tab from first item cycles to final item
+    await page.keyboard.press("Shift+Tab");
+    await expect(lastLink).toBeFocused();
+
+    // 4. Escape closes drawer and restores focus to trigger button
     await page.keyboard.press("Escape");
     await expect(drawer).not.toBeVisible();
+    await expect(filterButton).toBeFocused();
+  });
+
+  test("Mobile filter drawer closes and restores focus when clicking backdrop", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/en");
+
+    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
+    await filterButton.click();
+
+    const drawer = page.locator("#mobile-genre-drawer");
+    await expect(drawer).toBeVisible();
+
+    // Click outside drawer on backdrop overlay (e.g. at x: 350, y: 100)
+    await page.mouse.click(350, 100);
+    await expect(drawer).not.toBeVisible();
+    await expect(filterButton).toBeFocused();
+  });
+
+  test("Mobile filter drawer genre selection navigates and closes drawer", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/en");
+
+    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
+    await filterButton.click();
+
+    const drawer = page.locator("#mobile-genre-drawer");
+    await expect(drawer).toBeVisible();
+
+    // Click Sci-Fi link
+    const scifiLink = drawer.locator("a:has-text('Sci-Fi')").first();
+    await scifiLink.click();
+
+    await expect(drawer).not.toBeVisible();
+    await expect(page).toHaveURL(/genre=scifi/);
   });
 });

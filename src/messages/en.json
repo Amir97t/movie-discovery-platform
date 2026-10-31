@@ -38,6 +38,8 @@
     "carouselPlay": "Start carousel rotation",
     "carouselPause": "Pause carousel rotation",
     "carouselSlide": "Go to slide {number}",
+    "carouselRegion": "Featured movie carousel",
+    "carouselSlideLabel": "{current} of {total}: {title}",
     "viewDetails": "View details",
     "allMovies": "All Movies",
     "previous": "Previous",

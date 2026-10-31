@@ -46,27 +46,22 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
   const tm = useTranslations("movie");
   const tg = useTranslations("genres");
 
-  const [slides, setSlides] = useState<Movie[]>(() => candidates.slice(0, 6));
+  // Initial candidate order is randomized on the server per request using Fisher-Yates,
+  // ensuring the initial slide matches between server-render and client hydration without mismatches.
+  const slides = candidates.slice(0, 6);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+
+  // Track image load failures per slide to cascade gracefully through fallback hierarchy
+  const [backdropErrors, setBackdropErrors] = useState<Record<string, boolean>>({});
+  const [posterErrors, setPosterErrors] = useState<Record<string, boolean>>({});
 
   const prefersReducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, () => false);
   const isDocumentHidden = useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, () => false);
 
   const plainNumber = new Intl.NumberFormat(locale, { useGrouping: false });
-
-  // On client mount: randomize rotation order without hydration mismatch
-  useEffect(() => {
-    if (candidates.length < 2) return;
-    // Keep initial slide deterministic for hydration parity, shuffle subsequent candidates
-    const [first, ...rest] = candidates.slice(0, 6);
-    const shuffled = [...rest].sort(() => Math.random() - 0.5);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSlides([first, ...shuffled]);
-  }, [candidates]);
 
   // Auto-rotation timer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,21 +132,36 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
 
   return (
     <section
-      aria-label="Featured movie carousel"
+      aria-label={t("carouselRegion")}
       aria-roledescription="carousel"
       className="group relative isolate overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl transition-all duration-300"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onFocusCapture={() => setIsFocused(true)}
-      onBlurCapture={() => setIsFocused(false)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={(e) => {
+        // Prevent focus moving between controls inside the carousel from disabling pause
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsFocused(false);
+        }
+      }}
     >
       {/* Background Slides */}
       <div className="relative h-[24rem] w-full sm:h-[30rem] lg:h-[34rem]">
         {slides.map((movie, index) => {
           const isActive = index === currentIndex;
-          const hasError = imageErrors[movie.id];
-          const showBackdrop = Boolean(movie.backdropUrl) && !hasError;
-          const style = movie.art
+          const hasBackdropError = Boolean(backdropErrors[movie.id]);
+          const hasPosterError = Boolean(posterErrors[movie.id]);
+
+          // Artwork fallback hierarchy:
+          // 1. Prefer backdropUrl
+          // 2. If no backdrop (or error), use posterUrl in cinematic layout
+          // 3. If neither (or both error), use fixture gradient artwork if available
+          // 4. Use BrandMark as final watermark fallback
+          const showBackdrop = Boolean(movie.backdropUrl) && !hasBackdropError;
+          const showPoster = !showBackdrop && Boolean(movie.posterUrl) && !hasPosterError;
+          const showFixtureArt = !showBackdrop && !showPoster && Boolean(movie.art);
+
+          const fixtureStyle = showFixtureArt && movie.art
             ? { backgroundImage: `linear-gradient(135deg, ${movie.art[0]} 0%, ${movie.art[1]} 100%)` }
             : undefined;
 
@@ -160,15 +170,20 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
               key={movie.id}
               role="group"
               aria-roledescription="slide"
-              aria-label={`${index + 1} of ${slides.length}: ${movie.title}`}
+              aria-label={t("carouselSlideLabel", {
+                current: index + 1,
+                total: slides.length,
+                title: movie.title,
+              })}
               aria-hidden={!isActive}
               className={cn(
                 "absolute inset-0 transition-opacity duration-700 ease-in-out",
                 isActive ? "z-0 opacity-100" : "-z-10 opacity-0 pointer-events-none",
-                !showBackdrop && "bg-skeleton",
+                !showBackdrop && !showPoster && !showFixtureArt && "bg-skeleton",
               )}
-              style={style}
+              style={fixtureStyle}
             >
+              {/* 1. Primary Backdrop Image */}
               {showBackdrop && (
                 <Image
                   src={movie.backdropUrl!}
@@ -177,13 +192,46 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
                   priority={index === 0}
                   sizes="100vw"
                   className="object-cover object-center"
-                  onError={() => setImageErrors((prev) => ({ ...prev, [movie.id]: true }))}
+                  onError={() => setBackdropErrors((prev) => ({ ...prev, [movie.id]: true }))}
                 />
               )}
 
-              {/* Watermark brand mark on fallback */}
-              {(!showBackdrop || hasError) && (
-                <BrandMark className="absolute -end-8 -top-8 -z-10 size-72 text-on-art/10 sm:size-96 lg:size-[30rem]" />
+              {/* 2. Poster Fallback in Cinematic Layout */}
+              {showPoster && (
+                <div className="absolute inset-0 overflow-hidden" data-testid="poster-fallback-layout">
+                  {/* Ambient blurred backdrop created from poster */}
+                  <Image
+                    src={movie.posterUrl!}
+                    alt=""
+                    fill
+                    sizes="100vw"
+                    className="object-cover object-center scale-110 blur-xl opacity-40 brightness-75"
+                    aria-hidden="true"
+                  />
+                  {/* Crisp poster card accent placed in background */}
+                  <div className="absolute inset-y-8 end-8 hidden sm:flex items-center justify-center lg:end-16 z-0 pointer-events-none">
+                    <div className="relative h-4/5 aspect-[2/3] overflow-hidden rounded-xl border border-line-strong/40 shadow-2xl">
+                      <Image
+                        src={movie.posterUrl!}
+                        alt=""
+                        fill
+                        sizes="(min-width: 1024px) 320px, 240px"
+                        className="object-cover"
+                        onError={() => setPosterErrors((prev) => ({ ...prev, [movie.id]: true }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Fixture Artwork Fallback (handled by style={fixtureStyle}) */}
+
+              {/* 4. Final BrandMark watermark fallback (when neither image is present or both failed) */}
+              {(!showBackdrop && !showPoster) && (
+                <BrandMark
+                  data-testid="hero-brandmark-fallback"
+                  className="absolute -end-8 -top-8 -z-10 size-72 text-on-art/10 sm:size-96 lg:size-[30rem]"
+                />
               )}
             </div>
           );
@@ -270,16 +318,17 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
             </button>
 
             {/* Slide Indicator Dots */}
-            <div className="flex items-center gap-1.5 px-1.5">
+            <div className="flex items-center gap-1.5 px-1.5" role="tablist" aria-label={t("carouselRegion")}>
               {slides.map((slide, idx) => {
                 const isCurrent = idx === currentIndex;
                 return (
                   <button
                     key={slide.id}
                     type="button"
+                    role="tab"
                     onClick={() => goToSlide(idx)}
                     aria-label={t("carouselSlide", { number: idx + 1 })}
-                    aria-current={isCurrent ? "true" : undefined}
+                    aria-selected={isCurrent}
                     className={cn(
                       "h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                       isCurrent

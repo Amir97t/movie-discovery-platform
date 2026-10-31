@@ -18,16 +18,23 @@ vi.mock("next/image", () => ({
   default: ({
     src,
     alt,
+    onError,
     ...props
   }: {
     src: string;
     alt?: string;
+    onError?: () => void;
     [key: string]: unknown;
   }) => {
     const domProps = { ...props };
     delete domProps.fill;
     delete domProps.priority;
-    return React.createElement("img", { src, alt, ...domProps });
+    return React.createElement("img", {
+      src,
+      alt,
+      onError,
+      ...domProps,
+    });
   },
 }));
 
@@ -43,6 +50,8 @@ vi.mock("next-intl", () => ({
         carouselPlay: "Play carousel",
         carouselPause: "Pause carousel",
         carouselSlide: "Go to slide {number}",
+        carouselRegion: "Featured movie carousel",
+        carouselSlideLabel: "{current} of {total}: {title}",
       },
       movie: {
         minutes: "{value} min",
@@ -78,7 +87,7 @@ const createTestMovie = (partial: Partial<Movie> & { id: string; title: string }
   synopsis: null,
   posterUrl: null,
   backdropUrl: null,
-  art: ["#000", "#fff"],
+  art: null,
   director: null,
   actors: null,
   country: null,
@@ -130,7 +139,6 @@ const mockCandidates: Movie[] = [
 describe("HeroCarousel", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0.1);
   });
 
   afterEach(() => {
@@ -138,7 +146,7 @@ describe("HeroCarousel", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders deterministic initial slide for hydration safety", () => {
+  it("renders deterministic initial slide for hydration safety matching server candidate order", () => {
     render(<HeroCarousel candidates={mockCandidates} />);
 
     // First slide title is rendered and points to /movies/1
@@ -148,18 +156,31 @@ describe("HeroCarousel", () => {
     expect(detailLink).toHaveAttribute("href", "/movies/1");
   });
 
-  it("navigates to next slide on Next button click", () => {
+  it("renders different active initial candidate across randomized server candidate orders", () => {
+    // When candidates array starts with Movie Two, Movie Two is the initial active candidate
+    const reversedCandidates = [mockCandidates[1], mockCandidates[0], mockCandidates[2]];
+    render(<HeroCarousel candidates={reversedCandidates} />);
+
+    const heading = screen.getByRole("heading", { level: 2, name: "Movie Two" });
+    expect(heading).toBeInTheDocument();
+    const detailLink = screen.getByRole("link", { name: "View Details" });
+    expect(detailLink).toHaveAttribute("href", "/movies/2");
+  });
+
+  it("navigates to next slide on Next button click and updates active detail URL", () => {
     render(<HeroCarousel candidates={mockCandidates} />);
 
     expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Details" })).toHaveAttribute("href", "/movies/1");
 
     const nextBtn = screen.getByRole("button", { name: "Next slide" });
     fireEvent.click(nextBtn);
 
-    // After clicking next, current slide is slide 2
-    const dot2 = screen.getByRole("button", { name: "Go to slide 2" });
-    expect(dot2).toHaveAttribute("aria-current", "true");
-    expect(screen.queryByRole("heading", { level: 2, name: "Movie One" })).not.toBeInTheDocument();
+    // After clicking next, current slide is slide 2 (Movie Two)
+    const dot2 = screen.getByRole("tab", { name: "Go to slide 2" });
+    expect(dot2).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Details" })).toHaveAttribute("href", "/movies/2");
   });
 
   it("navigates to previous slide on Previous button click", () => {
@@ -169,9 +190,10 @@ describe("HeroCarousel", () => {
     fireEvent.click(prevBtn);
 
     // Wraps around to last slide (slide 3)
-    const dot3 = screen.getByRole("button", { name: "Go to slide 3" });
-    expect(dot3).toHaveAttribute("aria-current", "true");
-    expect(screen.queryByRole("heading", { level: 2, name: "Movie One" })).not.toBeInTheDocument();
+    const dot3 = screen.getByRole("tab", { name: "Go to slide 3" });
+    expect(dot3).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 2, name: "Movie Three" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Details" })).toHaveAttribute("href", "/movies/3");
   });
 
   it("pauses and plays rotation when play/pause button is clicked", () => {
@@ -195,8 +217,8 @@ describe("HeroCarousel", () => {
     act(() => {
       vi.advanceTimersByTime(7000);
     });
-    expect(screen.getByRole("button", { name: "Go to slide 2" })).toHaveAttribute("aria-current", "true");
-    expect(screen.queryByRole("heading", { level: 2, name: "Movie One" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Go to slide 2" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
   });
 
   it("automatically advances after 7 seconds when playing", () => {
@@ -208,17 +230,135 @@ describe("HeroCarousel", () => {
       vi.advanceTimersByTime(7000);
     });
 
-    expect(screen.getByRole("button", { name: "Go to slide 2" })).toHaveAttribute("aria-current", "true");
-    expect(screen.queryByRole("heading", { level: 2, name: "Movie One" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Go to slide 2" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
   });
 
-  it("renders static hero when only 1 candidate exists without controls", () => {
+  it("renders static hero when only 1 candidate exists without navigation controls", () => {
     render(<HeroCarousel candidates={[mockCandidates[0]]} />);
 
     expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
-    // Controls should not exist for single slide
     expect(screen.queryByRole("button", { name: "Next slide" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Previous slide" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pause carousel" })).not.toBeInTheDocument();
+  });
+
+  describe("Artwork fallback hierarchy", () => {
+    it("prefers backdropUrl when available", () => {
+      const movieWithBackdrop = createTestMovie({
+        id: "bd-1",
+        title: "Backdrop Movie",
+        backdropUrl: "/backdrops/bd.jpg",
+        posterUrl: "/posters/p.jpg",
+      });
+
+      const { container } = render(<HeroCarousel candidates={[movieWithBackdrop]} />);
+      const images = container.querySelectorAll("img");
+      expect(images).toHaveLength(1);
+      expect(images[0]).toHaveAttribute("src", "/backdrops/bd.jpg");
+    });
+
+    it("falls back to posterUrl in cinematic layout when backdropUrl is absent", () => {
+      const moviePosterOnly = createTestMovie({
+        id: "poster-only",
+        title: "Poster Only Movie",
+        backdropUrl: null,
+        posterUrl: "/posters/only-poster.jpg",
+      });
+
+      render(<HeroCarousel candidates={[moviePosterOnly]} />);
+      const posterLayout = screen.getByTestId("poster-fallback-layout");
+      expect(posterLayout).toBeInTheDocument();
+      // Contains the ambient blurred poster and crisp poster card
+      const imgs = posterLayout.querySelectorAll("img");
+      expect(imgs.length).toBeGreaterThanOrEqual(1);
+      expect(imgs[0]).toHaveAttribute("src", "/posters/only-poster.jpg");
+    });
+
+    it("falls back to posterUrl when backdrop image load triggers onError", () => {
+      const movie = createTestMovie({
+        id: "err-bd",
+        title: "Backdrop Error Movie",
+        backdropUrl: "/backdrops/fails.jpg",
+        posterUrl: "/posters/fallback.jpg",
+      });
+
+      const { container } = render(<HeroCarousel candidates={[movie]} />);
+      const backdropImg = container.querySelector("img[src='/backdrops/fails.jpg']");
+      expect(backdropImg).toBeInTheDocument();
+
+      // Trigger backdrop image error
+      fireEvent.error(backdropImg!);
+
+      // Should now show poster fallback layout
+      expect(screen.getByTestId("poster-fallback-layout")).toBeInTheDocument();
+    });
+
+    it("falls back to fixture gradient artwork when backdrop and poster are absent", () => {
+      const fixtureMovie = createTestMovie({
+        id: "fixture-only",
+        title: "Gradient Art Movie",
+        backdropUrl: null,
+        posterUrl: null,
+        art: ["#ff0000", "#0000ff"],
+      });
+
+      const { container } = render(<HeroCarousel candidates={[fixtureMovie]} />);
+      const slide = container.querySelector("[role='group']");
+      expect(slide).toHaveStyle({
+        backgroundImage: "linear-gradient(135deg, #ff0000 0%, #0000ff 100%)",
+      });
+      // BrandMark is also present as watermark overlay on non-image art
+      expect(screen.getByTestId("hero-brandmark-fallback")).toBeInTheDocument();
+    });
+
+    it("renders BrandMark as final fallback when neither backdrop nor poster exists", () => {
+      const minimalMovie = createTestMovie({
+        id: "no-art",
+        title: "No Art Movie",
+        backdropUrl: null,
+        posterUrl: null,
+        art: null,
+      });
+
+      render(<HeroCarousel candidates={[minimalMovie]} />);
+      expect(screen.getByTestId("hero-brandmark-fallback")).toBeInTheDocument();
+    });
+  });
+
+  describe("Focus management and pause behavior", () => {
+    it("pauses rotation while focus is inside carousel and retains pause when moving between controls", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+
+      const carousel = screen.getByRole("region", { name: "Featured movie carousel" });
+      const nextBtn = screen.getByRole("button", { name: "Next slide" });
+      const pauseBtn = screen.getByRole("button", { name: "Pause carousel" });
+
+      // Focus enters carousel onto Next button
+      fireEvent.focus(carousel);
+      fireEvent.focus(nextBtn);
+
+      // Advance time by 7s: should NOT auto-advance because focused
+      act(() => {
+        vi.advanceTimersByTime(7000);
+      });
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      // Move focus from next button to pause button (relatedTarget is inside carousel)
+      fireEvent.blur(carousel, { relatedTarget: pauseBtn });
+      act(() => {
+        vi.advanceTimersByTime(7000);
+      });
+      // Still on slide 1 because focus did not leave the carousel container
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      // Blur completely outside carousel
+      fireEvent.blur(carousel, { relatedTarget: document.body });
+      act(() => {
+        vi.advanceTimersByTime(7000);
+      });
+      // Now auto-advances to slide 2
+      expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
+    });
   });
 });
