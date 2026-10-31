@@ -20,7 +20,7 @@ export function EmptyState({ title, description, icon, action, className }: Empt
       {icon ? (
         <div
           aria-hidden="true"
-          className="flex size-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-surface/60 text-accent shadow-sm"
+          className="flex size-16 items-center justify-center rounded-2xl border border-line bg-surface/60 text-accent-text shadow-sm"
         >
           {icon}
         </div>

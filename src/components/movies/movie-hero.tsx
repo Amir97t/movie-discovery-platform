@@ -86,7 +86,7 @@ export function MovieHero({
 
       <div className="flex h-full max-w-2xl flex-col justify-end gap-3.5 p-6 text-on-art sm:p-8 lg:p-12">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent shadow-sm backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text shadow-sm backdrop-blur-sm">
             <span className="size-1.5 rounded-full bg-accent animate-pulse" />
             {kicker}
           </span>

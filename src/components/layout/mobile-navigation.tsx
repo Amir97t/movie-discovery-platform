@@ -25,7 +25,7 @@ export function MobileNavigation() {
           const active = available && pathname === href;
           const itemClasses = cn(
             "relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-xs transition-colors duration-200",
-            active ? "font-semibold text-accent" : "text-muted hover:text-fg",
+            active ? "font-semibold text-accent-text" : "text-muted hover:text-fg",
           );
           const indicator = active ? (
             <span

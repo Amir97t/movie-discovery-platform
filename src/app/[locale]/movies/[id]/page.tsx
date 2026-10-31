@@ -57,7 +57,7 @@ export default async function MovieDetailPage({
           backdropUrl={movie.backdropUrl}
           title={movie.title}
           badge={
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/20 px-3.5 py-1 text-xs font-semibold text-accent shadow-sm backdrop-blur-md">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/20 px-3.5 py-1 text-xs font-semibold text-accent-text shadow-sm backdrop-blur-md">
               <span className="size-1.5 rounded-full bg-accent animate-pulse" />
               {t("detailPage")}
             </span>
@@ -161,7 +161,7 @@ export default async function MovieDetailPage({
               href={movie.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="text-sm text-accent-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {movie.website}
             </a>

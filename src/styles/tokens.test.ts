@@ -43,6 +43,12 @@ describe.each(MODES)("%s mode tokens", (mode) => {
     }
   });
 
+  it("text-safe accent reaches 4.5:1 on background, surface, and raised surface", () => {
+    for (const surface of surfaces) {
+      expect(contrast(t["accent-text"]!, t[surface]!), `accent-text on ${surface}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it("primary action button carries its foreground at 4.5:1 in normal and hover states", () => {
     expect(contrast(t["accent-foreground"]!, t["accent"]!), "accent-foreground on accent").toBeGreaterThanOrEqual(4.5);
     expect(contrast(t["accent-foreground"]!, t["accent-hover"]!), "accent-foreground on accent-hover").toBeGreaterThanOrEqual(4.5);

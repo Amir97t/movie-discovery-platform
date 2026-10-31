@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Languages, Monitor, Moon, Palette as PaletteIcon, Sun, type LucideIcon } from "lucide-react";
+import { Check, Languages, Monitor, Moon, Sun, SunMoon, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/icon-button";
@@ -102,7 +102,7 @@ export function AppearanceMenu() {
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <PaletteIcon aria-hidden="true" className="size-5" />
+        <SunMoon aria-hidden="true" className="size-5" />
       </IconButton>
 
       <div
@@ -124,7 +124,7 @@ export function AppearanceMenu() {
             >
               <Languages aria-hidden="true" className="size-4 shrink-0" />
               <span className="flex-1 text-start">{LANGUAGE_NAMES[code] ?? code}</span>
-              {code === locale ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent" /> : null}
+              {code === locale ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent-text" /> : null}
             </Link>
           ))}
         </Group>
@@ -142,7 +142,7 @@ export function AppearanceMenu() {
               >
                 <Icon aria-hidden="true" className="size-4 shrink-0" />
                 <span className="flex-1 text-start">{t(`modes.${value}`)}</span>
-                {mode === value ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent" /> : null}
+                {mode === value ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent-text" /> : null}
               </button>
             );
           })}

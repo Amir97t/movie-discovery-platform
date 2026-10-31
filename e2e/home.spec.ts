@@ -147,3 +147,20 @@ test("migrates legacy blue palette with system mode to canonical mode-only JSON 
   const parsed = JSON.parse(stored!);
   expect(parsed).toEqual({ mode: "system" });
 });
+
+test("handles valid JSON primitives in localStorage safely and canonicalizes to default mode", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("frame-appearance", "42");
+  });
+  await page.goto("/en");
+
+  const html = page.locator("html");
+  await expect(html).not.toHaveAttribute("data-palette");
+  await expect(html).toHaveAttribute("data-mode", "dark");
+  await expect(html).toHaveAttribute("data-mode-pref", "dark");
+
+  const stored = await page.evaluate(() => localStorage.getItem("frame-appearance"));
+  expect(stored).not.toBeNull();
+  const parsed = JSON.parse(stored!);
+  expect(parsed).toEqual({ mode: "dark" });
+});

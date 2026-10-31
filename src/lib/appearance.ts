@@ -30,7 +30,7 @@ export function parseAppearance(raw: string | null | undefined): Appearance {
   if (!raw) return { ...DEFAULT_APPEARANCE };
   try {
     const data: unknown = JSON.parse(raw);
-    if (data && typeof data === "object") {
+    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
       const record = data as Record<string, unknown>;
       return {
         mode: isModePreference(record.mode) ? record.mode : DEFAULT_APPEARANCE.mode,
@@ -61,17 +61,16 @@ export function readStoredAppearance(
   try {
     const raw = storage?.getItem(APPEARANCE_STORAGE_KEY);
     const parsed = parseAppearance(raw);
-    if (raw && storage && "setItem" in storage && typeof storage.setItem === "function") {
+    if (raw !== null && raw !== undefined && storage && typeof storage.setItem === "function") {
       try {
         const data: unknown = JSON.parse(raw);
-        if (data && typeof data === "object") {
-          const record = data as Record<string, unknown>;
-          if ("palette" in record || Object.keys(record).length !== 1 || record.mode !== parsed.mode) {
-            writeStoredAppearance(storage, parsed);
-          }
+        const isObj = data !== null && typeof data === "object" && !Array.isArray(data);
+        if (!isObj || "palette" in data || (data as Record<string, unknown>).mode !== parsed.mode || Object.keys(data).length !== 1) {
+          writeStoredAppearance(storage, parsed);
         }
       } catch {
-        // ignore JSON errors
+        // If JSON.parse throws on non-empty raw string, canonicalize storage to parsed
+        writeStoredAppearance(storage, parsed);
       }
     }
     return parsed;

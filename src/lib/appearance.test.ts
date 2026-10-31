@@ -76,6 +76,44 @@ describe("storage helpers", () => {
     expect(appearance).toEqual({ mode: "light" });
     expect(saved).toBe(JSON.stringify({ mode: "light" }));
   });
+
+  it("safely canonicalizes primitive or malformed storage to valid defaults", () => {
+    const invalidCases = ["42", "true", '"hello"', "[1, 2]", "bad json", '{"mode":"invalid"}'];
+    for (const raw of invalidCases) {
+      let saved: string | null = null;
+      const storage = {
+        getItem: () => raw,
+        setItem: (_k: string, v: string) => {
+          saved = v;
+        },
+      };
+      const appearance = readStoredAppearance(storage);
+      expect(appearance).toEqual(DEFAULT_APPEARANCE);
+      expect(saved).toBe(JSON.stringify({ mode: "dark" }));
+    }
+  });
+
+  it("does not rewrite canonical storage or uninitialized null storage", () => {
+    let saved: string | null = null;
+    const storage = {
+      getItem: () => JSON.stringify({ mode: "light" }),
+      setItem: (_k: string, v: string) => {
+        saved = v;
+      },
+    };
+    expect(readStoredAppearance(storage)).toEqual({ mode: "light" });
+    expect(saved).toBeNull();
+
+    let nullSaved: string | null = null;
+    const nullStorage = {
+      getItem: () => null,
+      setItem: (_k: string, v: string) => {
+        nullSaved = v;
+      },
+    };
+    expect(readStoredAppearance(nullStorage)).toEqual(DEFAULT_APPEARANCE);
+    expect(nullSaved).toBeNull();
+  });
 });
 
 describe("applyAppearance", () => {
@@ -92,11 +130,16 @@ describe("applyAppearance", () => {
 });
 
 describe("pre-paint script parity", () => {
-  function runScript(stored: string | null, prefersDark: boolean) {
+  function runScript(stored: string | null, prefersDark: boolean, onSetItem?: (val: string) => void) {
     const root = document.createElement("html");
     root.dataset.palette = "blue";
     const fakeDocument = { documentElement: root };
-    const fakeStorage = { getItem: (key: string) => (key === APPEARANCE_STORAGE_KEY ? stored : null) };
+    const fakeStorage = {
+      getItem: (key: string) => (key === APPEARANCE_STORAGE_KEY ? stored : null),
+      setItem: (_k: string, v: string) => {
+        onSetItem?.(v);
+      },
+    };
     const fakeWindow = { matchMedia: () => ({ matches: prefersDark }) };
     new Function("document", "localStorage", "window", THEME_INIT_SCRIPT)(
       fakeDocument,
@@ -109,6 +152,10 @@ describe("pre-paint script parity", () => {
   const cases = [
     null,
     "garbage",
+    "42",
+    "true",
+    '"hello"',
+    "[1, 2]",
     '{"mode":"light"}',
     '{"mode":"dark"}',
     '{"mode":"system"}',
@@ -117,7 +164,7 @@ describe("pre-paint script parity", () => {
     '{"palette":"gold","mode":"system"}',
   ];
 
-  it("produces the same result as applyAppearance for stored and OS inputs", () => {
+  it("produces the same result as applyAppearance for stored and OS inputs without throwing", () => {
     for (const stored of cases) {
       for (const prefersDark of [true, false]) {
         const expected = parseAppearance(stored);
@@ -134,22 +181,44 @@ describe("pre-paint script parity", () => {
 
   it("migrates legacy records in storage to mode-only during pre-paint script execution", () => {
     let saved: string | null = null;
-    const root = document.createElement("html");
-    const fakeDocument = { documentElement: root };
-    const fakeStorage = {
-      getItem: () => '{"palette":"gold","mode":"light"}',
-      setItem: (_k: string, v: string) => {
-        saved = v;
-      },
-    };
-    const fakeWindow = { matchMedia: () => ({ matches: true }) };
-    new Function("document", "localStorage", "window", THEME_INIT_SCRIPT)(
-      fakeDocument,
-      fakeStorage,
-      fakeWindow,
-    );
-    expect(root.dataset.mode).toBe("light");
-    expect(root.dataset.modePref).toBe("light");
+    const result = runScript('{"palette":"gold","mode":"light"}', true, (val) => {
+      saved = val;
+    });
+    expect(result.mode).toBe("light");
+    expect(result.pref).toBe("light");
+    expect(result.palette).toBeUndefined();
     expect(saved).toBe(JSON.stringify({ mode: "light" }));
+  });
+
+  it("safely handles valid JSON primitives and corrupt storage during pre-paint script", () => {
+    const invalidInputs = ["42", "true", '"hello"', "[1, 2]", "not json", '{"mode":"banana"}'];
+    for (const raw of invalidInputs) {
+      let saved: string | null = null;
+      const result = runScript(raw, true, (val) => {
+        saved = val;
+      });
+      expect(result.mode).toBe("dark");
+      expect(result.pref).toBe("dark");
+      expect(result.palette).toBeUndefined();
+      expect(saved).toBe(JSON.stringify({ mode: "dark" }));
+    }
+  });
+
+  it("does not overwrite canonical storage or null storage during pre-paint script", () => {
+    let saved: string | null = null;
+    const result = runScript(JSON.stringify({ mode: "light" }), true, (val) => {
+      saved = val;
+    });
+    expect(result.mode).toBe("light");
+    expect(result.pref).toBe("light");
+    expect(saved).toBeNull();
+
+    let nullSaved: string | null = null;
+    const nullResult = runScript(null, true, (val) => {
+      nullSaved = val;
+    });
+    expect(nullResult.mode).toBe("dark");
+    expect(nullResult.pref).toBe("dark");
+    expect(nullSaved).toBeNull();
   });
 });

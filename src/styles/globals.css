@@ -13,6 +13,7 @@
   --color-brand: var(--brand-red);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
   --color-accent-fg: var(--accent-foreground);
   --color-favorite: var(--favorite);
   --color-success: var(--success);

@@ -36,7 +36,7 @@ export function MovieCard({
       <div className="relative overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-md">
         <PosterArt art={art} posterUrl={posterUrl} className="aspect-[2/3] w-full" />
       </div>
-      <h3 className="mt-3 line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-fg transition-colors duration-200 group-hover:text-accent">
+      <h3 className="mt-3 line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-fg transition-colors duration-200 group-hover:text-accent-text">
         {title}
       </h3>
       <p className="mt-1 min-h-[1.25em] truncate text-xs text-muted">{metaText}</p>
