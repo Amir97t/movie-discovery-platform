@@ -93,7 +93,43 @@ export function writeStoredAppearance(
   }
 }
 
-/** Writes the DOM contract: data-mode (resolved), data-mode-pref. */
+export const THEME_CANVAS_COLORS: Record<ResolvedMode, string> = {
+  dark: "#111318",
+  light: "#F3EFEB",
+};
+
+/**
+ * Synchronizes browser theme-color meta tags with the active resolved appearance.
+ * If manual mode is active, ensures meta tags reflect the user's explicit choice
+ * rather than the operating system's prefers-color-scheme.
+ */
+export function updateThemeColorMeta(
+  resolved: ResolvedMode,
+  modePref: ModePreference = resolved,
+  doc: Document | null | undefined = typeof document !== "undefined" ? document : null,
+): void {
+  if (!doc) return;
+  const targetColor = THEME_CANVAS_COLORS[resolved];
+  const metas = doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  if (metas.length > 0) {
+    metas.forEach((meta) => {
+      const media = meta.getAttribute("media");
+      if (!media || modePref !== "system") {
+        meta.setAttribute("content", targetColor);
+      } else {
+        if (media.includes("dark")) meta.setAttribute("content", THEME_CANVAS_COLORS.dark);
+        if (media.includes("light")) meta.setAttribute("content", THEME_CANVAS_COLORS.light);
+      }
+    });
+  } else {
+    const meta = doc.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("content", targetColor);
+    doc.head.appendChild(meta);
+  }
+}
+
+/** Writes the DOM contract: data-mode (resolved), data-mode-pref and theme-color meta. */
 export function applyAppearance(
   root: HTMLElement,
   appearance: Appearance,
@@ -104,5 +140,6 @@ export function applyAppearance(
   root.dataset.modePref = appearance.mode;
   root.style.colorScheme = resolved;
   delete root.dataset.palette;
+  updateThemeColorMeta(resolved, appearance.mode, root.ownerDocument || (typeof document !== "undefined" ? document : null));
   return resolved;
 }

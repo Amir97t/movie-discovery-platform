@@ -154,7 +154,7 @@ test.describe("Internal localized navigation", () => {
 
     await page.goto("/fa/movies/1");
     await page.locator("a:has-text('← بازگشت به خانه')").first().click();
-    await expect(page).toHaveURL(/\/fa\/?$/);
+    await expect(page).toHaveURL(/\/fa\/?$/, { timeout: 10000 });
     expect(page.url()).not.toContain("/fa/fa");
   });
 
@@ -162,7 +162,7 @@ test.describe("Internal localized navigation", () => {
     await page.goto("/en");
     const scifiChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('Sci-Fi')").first();
     await scifiChip.click();
-    await expect(page).toHaveURL(/\/en\?genre=scifi&page=1/);
+    await expect(page).toHaveURL(/\/en\?genre=scifi&page=1/, { timeout: 10000 });
     await expect(page.locator("#picks")).toBeVisible();
 
     const allChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('All')").first();

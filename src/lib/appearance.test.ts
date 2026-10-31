@@ -127,6 +127,38 @@ describe("applyAppearance", () => {
     expect(root.style.colorScheme).toBe("dark");
     expect(root.dataset.palette).toBeUndefined();
   });
+
+  it("synchronizes meta[name=theme-color] with active resolved mode", () => {
+    const root = document.createElement("html");
+    const metaLight = document.createElement("meta");
+    metaLight.setAttribute("name", "theme-color");
+    metaLight.setAttribute("media", "(prefers-color-scheme: light)");
+    metaLight.setAttribute("content", "#F3EFEB");
+    const metaDark = document.createElement("meta");
+    metaDark.setAttribute("name", "theme-color");
+    metaDark.setAttribute("media", "(prefers-color-scheme: dark)");
+    metaDark.setAttribute("content", "#111318");
+    document.head.appendChild(metaLight);
+    document.head.appendChild(metaDark);
+
+    // Explicit manual dark mode: both meta tags should be dark (#111318)
+    applyAppearance(root, { mode: "dark" }, false);
+    expect(metaLight.getAttribute("content")).toBe("#111318");
+    expect(metaDark.getAttribute("content")).toBe("#111318");
+
+    // Explicit manual light mode: both meta tags should be light (#F3EFEB)
+    applyAppearance(root, { mode: "light" }, true);
+    expect(metaLight.getAttribute("content")).toBe("#F3EFEB");
+    expect(metaDark.getAttribute("content")).toBe("#F3EFEB");
+
+    // System mode: restores media-specific colors
+    applyAppearance(root, { mode: "system" }, true);
+    expect(metaLight.getAttribute("content")).toBe("#F3EFEB");
+    expect(metaDark.getAttribute("content")).toBe("#111318");
+
+    metaLight.remove();
+    metaDark.remove();
+  });
 });
 
 describe("pre-paint script parity", () => {

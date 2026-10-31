@@ -145,6 +145,45 @@
   background-color: var(--scrollbar-thumb-hover);
 }
 
+/* Liquid Navbar Active Indicator animations */
+@keyframes liquid-stretch-right {
+  0% {
+    transform: scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: scaleX(1.10) scaleY(0.93) skewX(-2.5deg);
+  }
+  70% {
+    transform: scaleX(0.98) scaleY(1.01) skewX(0.8deg);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1) skewX(0);
+  }
+}
+
+@keyframes liquid-stretch-left {
+  0% {
+    transform: scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: scaleX(1.10) scaleY(0.93) skewX(2.5deg);
+  }
+  70% {
+    transform: scaleX(0.98) scaleY(1.01) skewX(-0.8deg);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1) skewX(0);
+  }
+}
+
+.animate-liquid-stretch-right {
+  animation: liquid-stretch-right 400ms cubic-bezier(0.25, 1.15, 0.45, 1) forwards;
+}
+
+.animate-liquid-stretch-left {
+  animation: liquid-stretch-left 400ms cubic-bezier(0.25, 1.15, 0.45, 1) forwards;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .liquid-glass,
   .liquid-glass-pill {
