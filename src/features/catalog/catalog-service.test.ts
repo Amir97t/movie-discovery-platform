@@ -4,6 +4,8 @@ import {
   APPLICATION_PAGE_SIZE,
   clearApiMetadataCache,
   fetchPaginatedMoviesFromApi,
+  fetchRawApiPage,
+  GENRE_ALIASES,
   GENRE_KEY_TO_API_NAME,
   getAllMovies,
   getHeroCandidates,
@@ -871,15 +873,29 @@ describe("Phase 2 & 2.1 - 15-movie pagination, hero candidates and metadata disc
   });
 
   describe("resolveGenreKey", () => {
-    it("maps diverse casing and variants to canonical GenreKey", () => {
+    it("maps diverse casing, variants, and aliases to canonical GenreKey", () => {
       expect(resolveGenreKey("Sci-Fi")).toBe("scifi");
       expect(resolveGenreKey("sci-fi")).toBe("scifi");
       expect(resolveGenreKey("scifi")).toBe("scifi");
+      expect(resolveGenreKey("science-fiction")).toBe("scifi");
+      expect(resolveGenreKey("sciencefiction")).toBe("scifi");
       expect(resolveGenreKey("Film-Noir")).toBe("filmNoir");
       expect(resolveGenreKey("filmNoir")).toBe("filmNoir");
+      expect(resolveGenreKey("film-noir")).toBe("filmNoir");
+      expect(resolveGenreKey("filmnoir")).toBe("filmNoir");
       expect(resolveGenreKey("Crime")).toBe("crime");
       expect(resolveGenreKey("crime")).toBe("crime");
       expect(resolveGenreKey("UNKNOWN")).toBeUndefined();
+      expect(resolveGenreKey("superhero")).toBeUndefined();
+      expect(resolveGenreKey("non-existent")).toBeUndefined();
+      expect(resolveGenreKey("")).toBeUndefined();
+      expect(resolveGenreKey("   ")).toBeUndefined();
+    });
+
+    it("GENRE_ALIASES includes documented aliases without mutating canonical keys", () => {
+      expect(GENRE_ALIASES["science-fiction"]).toBe("scifi");
+      expect(GENRE_ALIASES["sci-fi"]).toBe("scifi");
+      expect(GENRE_ALIASES["film-noir"]).toBe("filmNoir");
     });
   });
 
@@ -1345,6 +1361,308 @@ describe("Phase 2 & 2.1 - 15-movie pagination, hero candidates and metadata disc
       await expect(
         fetchPaginatedMoviesFromApi("https://moviesapi.codingfront.dev/api/v1/movies", 1),
       ).rejects.toThrow("Inconsistent upstream records");
+    });
+
+    it("ensures zero overlap across logical pages 1, 2, and 3 when upstream boundary duplicates exist (Regression Scenario)", async () => {
+      const fetchMock = vi.mocked(fetch);
+
+      // API page 1: IDs 1 through 12
+      const apiPage1 = Array.from({ length: 12 }, (_, i) => ({ ...mockMovie, id: i + 1 }));
+      // API page 2: ID 12 repeated, IDs 13 through 23
+      const apiPage2 = [
+        { ...mockMovie, id: 12 },
+        ...Array.from({ length: 11 }, (_, i) => ({ ...mockMovie, id: i + 13 })),
+      ];
+      // API page 3: IDs 24 through 35
+      const apiPage3 = Array.from({ length: 12 }, (_, i) => ({ ...mockMovie, id: i + 24 }));
+
+      fetchMock.mockImplementation((url) => {
+        const urlStr = String(url);
+        if (urlStr.includes("page=1")) {
+          return Promise.resolve(
+            createMockResponse(apiPage1, {
+              current_page: 1,
+              per_page: 12,
+              page_count: 3,
+              total_count: 35,
+            }),
+          );
+        }
+        if (urlStr.includes("page=2")) {
+          return Promise.resolve(
+            createMockResponse(apiPage2, {
+              current_page: 2,
+              per_page: 12,
+              page_count: 3,
+              total_count: 35,
+            }),
+          );
+        }
+        if (urlStr.includes("page=3")) {
+          return Promise.resolve(
+            createMockResponse(apiPage3, {
+              current_page: 3,
+              per_page: 12,
+              page_count: 3,
+              total_count: 35,
+            }),
+          );
+        }
+        return Promise.reject(new Error(`Unexpected page request: ${urlStr}`));
+      });
+
+      const page1 = await fetchPaginatedMoviesFromApi(
+        "https://moviesapi.codingfront.dev/api/v1/movies",
+        1,
+      );
+      const page2 = await fetchPaginatedMoviesFromApi(
+        "https://moviesapi.codingfront.dev/api/v1/movies",
+        2,
+      );
+      const page3 = await fetchPaginatedMoviesFromApi(
+        "https://moviesapi.codingfront.dev/api/v1/movies",
+        3,
+      );
+
+      const p1Ids = page1.movies.map((m) => m.id);
+      const p2Ids = page2.movies.map((m) => m.id);
+      const p3Ids = page3.movies.map((m) => m.id);
+
+      // Logical page 1: IDs 1 through 15
+      expect(p1Ids).toHaveLength(15);
+      expect(p1Ids).toEqual(Array.from({ length: 15 }, (_, i) => String(i + 1)));
+
+      // Logical page 2: IDs 16 through 30 (not 15 through 29)
+      expect(p2Ids).toHaveLength(15);
+      expect(p2Ids).toEqual(Array.from({ length: 15 }, (_, i) => String(i + 16)));
+
+      // Logical page 3: IDs 31 through 35 (final partial page of 5 items)
+      expect(p3Ids).toHaveLength(5);
+      expect(p3Ids).toEqual(Array.from({ length: 5 }, (_, i) => String(i + 31)));
+
+      // No duplicate IDs within any single logical page
+      expect(new Set(p1Ids).size).toBe(15);
+      expect(new Set(p2Ids).size).toBe(15);
+      expect(new Set(p3Ids).size).toBe(5);
+
+      // Zero overlap across logical pages
+      const overlapP1P2 = p1Ids.filter((id) => p2Ids.includes(id));
+      const overlapP2P3 = p2Ids.filter((id) => p3Ids.includes(id));
+      const overlapP1P3 = p1Ids.filter((id) => p3Ids.includes(id));
+
+      expect(overlapP1P2).toEqual([]);
+      expect(overlapP2P3).toEqual([]);
+      expect(overlapP1P3).toEqual([]);
+
+      // Metadata verification
+      expect(page1.metadata).toEqual({
+        current_page: "1",
+        per_page: "15",
+        page_count: "3",
+        total_count: "35",
+      });
+      expect(page2.metadata).toEqual({
+        current_page: "2",
+        per_page: "15",
+        page_count: "3",
+        total_count: "35",
+      });
+      expect(page3.metadata).toEqual({
+        current_page: "3",
+        per_page: "15",
+        page_count: "3",
+        total_count: "35",
+      });
+    });
+  });
+
+  describe("fetchRawApiPage metadata validation (isolated tests)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("rejects when per_page is 'invalid' with valid total_count", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: "invalid",
+          page_count: 1,
+          total_count: 30,
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata.*per_page/);
+    });
+
+    it("rejects when per_page is 0", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 0,
+          page_count: 1,
+          total_count: 30,
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata.*per_page/);
+    });
+
+    it("rejects when per_page is negative", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: -12,
+          page_count: 1,
+          total_count: 30,
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata.*per_page/);
+    });
+
+    it("rejects when total_count is 'invalid' with valid per_page", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 12,
+          page_count: 1,
+          total_count: "invalid",
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata.*total_count/);
+    });
+
+    it("rejects when total_count is negative", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 12,
+          page_count: 1,
+          total_count: -10,
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata.*total_count/);
+    });
+
+    it("rejects when required metadata is missing", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 12,
+          // total_count and page_count missing
+        }),
+      );
+
+      await expect(
+        fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1"),
+      ).rejects.toThrow(/Invalid pagination metadata/);
+    });
+
+    it("accepts a valid zero-result response without replacing with defaults", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([], {
+          current_page: 1,
+          per_page: 12,
+          page_count: 0,
+          total_count: 0,
+        }),
+      );
+
+      const res = await fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1");
+      expect(res.movies).toEqual([]);
+      expect(res.metadata).toEqual({
+        current_page: 1,
+        per_page: 12,
+        page_count: 0,
+        total_count: 0,
+      });
+    });
+
+    it("accepts a valid native 15-item response", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const apiPage = Array.from({ length: 15 }, (_, i) => ({ ...mockMovie, id: i + 1 }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(apiPage, {
+          current_page: 1,
+          per_page: 15,
+          page_count: 2,
+          total_count: 30,
+        }),
+      );
+
+      const res = await fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=1");
+      expect(res.movies).toHaveLength(15);
+      expect(res.metadata).toEqual({
+        current_page: 1,
+        per_page: 15,
+        page_count: 2,
+        total_count: 30,
+      });
+    });
+
+    it("accepts a valid 12-item response", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const apiPage = Array.from({ length: 12 }, (_, i) => ({ ...mockMovie, id: i + 1 }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(apiPage, {
+          current_page: 2,
+          per_page: 12,
+          page_count: 3,
+          total_count: 35,
+        }),
+      );
+
+      const res = await fetchRawApiPage("https://moviesapi.codingfront.dev/api/v1/movies?page=2");
+      expect(res.movies).toHaveLength(12);
+      expect(res.metadata).toEqual({
+        current_page: 2,
+        per_page: 12,
+        page_count: 3,
+        total_count: 35,
+      });
+    });
+
+    it("falls back to localized fixture when raw API metadata is malformed", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: "invalid",
+          page_count: 1,
+          total_count: 30,
+        }),
+      );
+
+      const result = await getMoviesByPage(1, "fa");
+      expect(result.source).toBe("fixture");
+      expect(result.movies).toHaveLength(15);
+      expect(result.metadata.per_page).toBe("15");
+      expect(result.metadata.total_count).toBe(String(FIXTURE_MOVIES.length));
     });
   });
 

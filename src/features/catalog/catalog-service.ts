@@ -118,10 +118,25 @@ export function shuffleCandidates<T>(items: readonly T[]): T[] {
   return array;
 }
 
-/** Maps any casing or variant of a genre name to internal GenreKey. */
+export const GENRE_ALIASES: Record<string, GenreKey> = {
+  "science-fiction": "scifi",
+  "sciencefiction": "scifi",
+  "sci-fi": "scifi",
+  "scifi": "scifi",
+  "film-noir": "filmNoir",
+  "filmnoir": "filmNoir",
+};
+
+/** Maps any casing, variant, or alias of a genre name to internal GenreKey. */
 export function resolveGenreKey(genreName: string): GenreKey | undefined {
+  if (typeof genreName !== "string") return undefined;
   const trimmed = genreName.trim();
+  if (!trimmed) return undefined;
   const lower = trimmed.toLowerCase();
+
+  if (GENRE_ALIASES[lower]) {
+    return GENRE_ALIASES[lower];
+  }
   if (API_NAME_TO_GENRE_KEY[lower]) {
     return API_NAME_TO_GENRE_KEY[lower];
   }
@@ -331,6 +346,20 @@ export async function getMovieByIdDirect(id: string): Promise<Movie> {
   return movie;
 }
 
+function parseApiInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (!/^-?\d+$/.test(trimmed)) return null;
+    const num = Number(trimmed);
+    return Number.isSafeInteger(num) ? num : null;
+  }
+  return null;
+}
+
 /** Internal helper to fetch a single raw page from the API. */
 export async function fetchRawApiPage(
   url: string,
@@ -370,10 +399,24 @@ export async function fetchRawApiPage(
       throw new Error("Malformed response envelope");
     }
 
-    const perPage = Number(apiResponse.metadata.per_page) || 12;
-    const currentPage = Number(apiResponse.metadata.current_page) || 1;
-    const pageCount = Number(apiResponse.metadata.page_count) || 1;
-    const totalCount = Number(apiResponse.metadata.total_count) || 0;
+    const meta = apiResponse.metadata;
+    const perPage = parseApiInteger(meta.per_page);
+    const currentPage = parseApiInteger(meta.current_page);
+    const pageCount = parseApiInteger(meta.page_count);
+    const totalCount = parseApiInteger(meta.total_count);
+
+    if (currentPage === null || currentPage < 1) {
+      throw new Error("Invalid pagination metadata: current_page must be a positive integer");
+    }
+    if (perPage === null || perPage < 1) {
+      throw new Error("Invalid pagination metadata: per_page must be a positive integer");
+    }
+    if (totalCount === null || totalCount < 0) {
+      throw new Error("Invalid pagination metadata: total_count must be a non-negative integer");
+    }
+    if (pageCount === null || pageCount < 0 || (totalCount > 0 && pageCount < 1)) {
+      throw new Error("Invalid pagination metadata: page_count must be valid for total_count");
+    }
 
     return {
       movies: normalizeMovieList(apiResponse.data),
@@ -416,24 +459,12 @@ export async function fetchPaginatedMoviesFromApi(
   // Discover actual per_page and total_count from a reliable metadata request
   const cachedMeta = apiMetadataCache.get(baseUrl);
   const initialApiPage = cachedMeta
-    ? Math.floor(((safePage - 1) * targetSize) / cachedMeta.perPage) + 1
+    ? (cachedMeta.perPage === targetSize ? safePage : 1)
     : safePage;
 
   const firstRes = await fetchRawApiPage(`${baseUrl}${sep}page=${initialApiPage}`);
-  const rawPerPage = Number(firstRes.metadata.per_page);
-  const rawTotal = Number(firstRes.metadata.total_count);
-
-  if (
-    !Number.isInteger(rawPerPage) ||
-    rawPerPage <= 0 ||
-    !Number.isInteger(rawTotal) ||
-    rawTotal < 0
-  ) {
-    throw new Error("Invalid pagination metadata");
-  }
-
-  const apiPerPage = rawPerPage;
-  const totalCount = rawTotal;
+  const apiPerPage = firstRes.metadata.per_page;
+  const totalCount = firstRes.metadata.total_count;
   apiMetadataCache.set(baseUrl, { perPage: apiPerPage, totalCount });
 
   const logicalPageCount = Math.max(1, Math.ceil(totalCount / targetSize));
@@ -445,8 +476,7 @@ export async function fetchPaginatedMoviesFromApi(
         ? firstRes
         : await fetchRawApiPage(`${baseUrl}${sep}page=${safePage}`);
 
-    const rawTotal = Number(directRes.metadata.total_count);
-    const currentTotal = Number.isInteger(rawTotal) && rawTotal >= 0 ? rawTotal : totalCount;
+    const currentTotal = directRes.metadata.total_count;
     const startIndex = (safePage - 1) * targetSize;
 
     if (startIndex >= currentTotal || currentTotal === 0) {
@@ -496,7 +526,7 @@ export async function fetchPaginatedMoviesFromApi(
 
   // Multi-API-page aggregation for logical 15-item application pages
   const startIndex = (safePage - 1) * targetSize;
-  const endIndex = startIndex + targetSize - 1;
+  const targetUniqueCount = startIndex + targetSize;
 
   if (startIndex >= totalCount || totalCount === 0) {
     return {
@@ -511,13 +541,11 @@ export async function fetchPaginatedMoviesFromApi(
     };
   }
 
-  const pStart = Math.floor(startIndex / apiPerPage) + 1;
-  const pEnd = Math.floor(endIndex / apiPerPage) + 1;
   const maxApiPage = Math.max(1, Math.ceil(totalCount / apiPerPage));
-  const clampedEnd = Math.min(pEnd, maxApiPage);
+  const estimatedEndApiPage = Math.min(maxApiPage, Math.ceil(targetUniqueCount / apiPerPage));
 
   const neededPages: number[] = [];
-  for (let p = pStart; p <= clampedEnd; p++) {
+  for (let p = 1; p <= estimatedEndApiPage; p++) {
     neededPages.push(p);
   }
 
@@ -528,31 +556,25 @@ export async function fetchPaginatedMoviesFromApi(
     }),
   );
 
-  const allMovies: Movie[] = [];
-  for (const res of responses) {
-    allMovies.push(...res.movies);
-  }
-
-  // Deduplicate all movies collected so far in encounter order
   const seen = new Set<string>();
   let hadDuplicates = false;
   const uniqueMovies: Movie[] = [];
-  for (const m of allMovies) {
-    if (seen.has(m.id)) {
-      hadDuplicates = true;
-    } else {
-      seen.add(m.id);
-      uniqueMovies.push(m);
+
+  for (const res of responses) {
+    for (const m of res.movies) {
+      if (seen.has(m.id)) {
+        hadDuplicates = true;
+      } else {
+        seen.add(m.id);
+        uniqueMovies.push(m);
+      }
     }
   }
 
-  const offset = (pStart - 1) * apiPerPage;
-  const sliceStart = Math.max(0, startIndex - offset);
-
   // If duplicates across API pages resulted in fewer unique items than needed,
   // fetch subsequent API pages to satisfy the logical page if more pages exist
-  let currentEnd = clampedEnd;
-  while (uniqueMovies.length < sliceStart + targetSize && currentEnd < maxApiPage) {
+  let currentEnd = estimatedEndApiPage;
+  while (uniqueMovies.length < targetUniqueCount && currentEnd < maxApiPage) {
     currentEnd++;
     const nextRes = await fetchRawApiPage(`${baseUrl}${sep}page=${currentEnd}`);
     for (const m of nextRes.movies) {
@@ -565,7 +587,7 @@ export async function fetchPaginatedMoviesFromApi(
     }
   }
 
-  const movies = uniqueMovies.slice(sliceStart, sliceStart + targetSize);
+  const movies = uniqueMovies.slice(startIndex, startIndex + targetSize);
   const expectedCount = Math.min(targetSize, Math.max(0, totalCount - startIndex));
 
   if (hadDuplicates && movies.length < expectedCount) {
