@@ -638,12 +638,38 @@ export async function getMoviesByPage(
 }
 
 /**
+ * Internal helper to paginate matching local fixtures for a resolved genre.
+ * Localizes movie titles and synopses and calculates accurate 15-item pagination metadata.
+ */
+export function getGenreFixtureFallback(
+  genreKey: GenreKey,
+  page: number,
+  locale: CatalogLocale,
+): {
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "fixture";
+} {
+  const safePage = Math.max(1, page);
+  const matchingFixtures = FIXTURE_MOVIES.filter((m) => m.genres.includes(genreKey));
+  const localized = matchingFixtures.map((m) => fixtureToMovie(m, locale));
+  const paginated = paginateItems(localized, safePage, APPLICATION_PAGE_SIZE);
+
+  return {
+    movies: paginated.items,
+    metadata: paginated.metadata,
+    source: "fixture",
+  };
+}
+
+/**
  * Fetches a logical 15-movie page of a specific genre from the genre endpoint:
  * GET /api/v1/genres/{genreName}/movies?page={page}
  *
  * Uses multi-page aggregation when the API returns 12-item pages.
- * Throws MovieNotFoundError when the API returns HTTP 404 or for unknown genres.
- * Falls back to genre-filtered fixtures in the requested locale on network failure, 5xx, or malformed data.
+ * Throws MovieNotFoundError for unknown application genres.
+ * Falls back to genre-filtered fixtures in the requested locale on API 404, empty response with available fixtures,
+ * network failure, 5xx, or malformed data.
  */
 export async function getMoviesByGenre(
   genreName: string,
@@ -663,27 +689,24 @@ export async function getMoviesByGenre(
   const encodedGenre = encodeURIComponent(apiGenreName);
 
   try {
-    return await fetchPaginatedMoviesFromApi(
+    const apiResult = await fetchPaginatedMoviesFromApi(
       `${MOVIES_API_ORIGIN}/api/v1/genres/${encodedGenre}/movies`,
       page,
     );
-  } catch (error) {
-    if (error instanceof MovieNotFoundError) {
-      throw error;
+
+    // If the API returns a successful but empty response, check whether matching local fixtures exist
+    if (apiResult.movies.length === 0 && Number(apiResult.metadata.total_count) === 0) {
+      const hasMatchingFixtures = FIXTURE_MOVIES.some((m) => m.genres.includes(genreKey));
+      if (hasMatchingFixtures) {
+        return getGenreFixtureFallback(genreKey, page, locale);
+      }
     }
 
-    // On network errors, timeouts, HTTP 5xx, malformed responses, or invalid API metadata,
-    // return fixture movies filtered to that genre in the requested locale.
-    const safePage = Math.max(1, page);
-    const matchingFixtures = FIXTURE_MOVIES.filter((m) => m.genres.includes(genreKey));
-    const localized = matchingFixtures.map((m) => fixtureToMovie(m, locale));
-    const paginated = paginateItems(localized, safePage, APPLICATION_PAGE_SIZE);
-
-    return {
-      movies: paginated.items,
-      metadata: paginated.metadata,
-      source: "fixture",
-    };
+    return apiResult;
+  } catch {
+    // API 404, HTTP 5xx, network error, timeout, or malformed metadata:
+    // Fall back to genre-filtered fixtures for this valid application genre
+    return getGenreFixtureFallback(genreKey, page, locale);
   }
 }
 

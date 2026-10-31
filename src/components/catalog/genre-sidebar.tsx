@@ -183,7 +183,7 @@ export function GenreSidebar({
               </button>
             </div>
 
-            <nav aria-label={genresTitle} className="flex-1 overflow-y-auto py-4 space-y-1 scrollbar-thin">
+            <nav aria-label={genresTitle} className="flex-1 overflow-y-auto py-4 space-y-1 sidebar-scroll pe-2">
               <Link
                 href={allHref}
                 onClick={closeDrawer}
@@ -225,22 +225,24 @@ export function GenreSidebar({
       {/* Desktop Vertical Sidebar (>= lg) with semantic navigation markup */}
       <section
         aria-labelledby={ariaLabelledBy}
-        className="hidden lg:block w-52 shrink-0 space-y-3 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-thin pe-1"
+        className="hidden lg:flex lg:flex-col w-56 shrink-0 rounded-2xl border border-line/70 bg-surface/85 backdrop-blur-sm p-3.5 shadow-sm sticky top-24 self-start max-h-[calc(100vh-8rem)]"
       >
-        <h2 id={ariaLabelledBy} className="px-3 text-xs font-bold uppercase tracking-wider text-muted">
-          {genresTitle}
-        </h2>
-        <nav aria-label={genresTitle}>
+        <div className="pb-2.5 mb-1 px-1 border-b border-line/40">
+          <h2 id={ariaLabelledBy} className="px-2 text-xs font-bold uppercase tracking-wider text-muted">
+            {genresTitle}
+          </h2>
+        </div>
+        <nav aria-label={genresTitle} className="flex-1 overflow-y-auto pe-2 sidebar-scroll">
           <ul className="space-y-1">
             <li key="all">
               <Link
                 href={allHref}
                 aria-current={!selectedGenreKey ? "page" : undefined}
                 className={cn(
-                  "group flex items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-150",
+                  "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150",
                   !selectedGenreKey
                     ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.3)]"
-                    : "text-muted hover:bg-surface/70 hover:text-fg",
+                    : "text-muted hover:bg-surface-raised/70 hover:text-fg",
                 )}
               >
                 <span>{allLabel}</span>
@@ -254,10 +256,10 @@ export function GenreSidebar({
                     href={item.href}
                     aria-current={isSelected ? "page" : undefined}
                     className={cn(
-                      "group flex items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-150",
+                      "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150",
                       isSelected
                         ? "bg-accent text-accent-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.3)]"
-                        : "text-muted hover:bg-surface/70 hover:text-fg",
+                        : "text-muted hover:bg-surface-raised/70 hover:text-fg",
                     )}
                   >
                     <span className="truncate">{item.label}</span>

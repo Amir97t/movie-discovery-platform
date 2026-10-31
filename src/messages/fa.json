@@ -115,6 +115,7 @@
     "backToHome": "بازگشت به خانه",
     "moviesTitle": "فیلم‌ها",
     "moviesNote": "{count} عنوان در دسترس",
+    "fixtureNotice": "نمایش نمونه‌های موجود برای این ژانر",
     "previous": "قبلی",
     "next": "بعدی",
     "pageInfo": "صفحه {current} از {total}"

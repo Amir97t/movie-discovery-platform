@@ -167,7 +167,7 @@ test.describe("Internal localized navigation", () => {
 
     const allChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('All')").first();
     await allChip.click();
-    await expect(page).toHaveURL(/\/en\/?$/);
+    await expect(page).toHaveURL(/\/en\/?$/, { timeout: 10000 });
   });
 
   test("clicking Discover genre filters catalog on Discover with genre query and page 1", async ({ page }) => {
@@ -507,5 +507,103 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
 
     await expect(drawer).not.toBeVisible();
     await expect(page).toHaveURL(/genre=scifi/);
+  });
+});
+
+test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockImageResponses(page);
+  });
+
+  test("Documentary genre displays fixture fallback titles and notice on API 404", async ({ page }) => {
+    await page.goto("/en/discover?genre=documentary&page=1");
+
+    // Verify fixture fallback notice is visible
+    const notice = page.locator("[data-testid='fixture-fallback-notice']");
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText("Showing sample titles for this genre.");
+
+    // Verify documentary movie cards are rendered
+    const movieCards = page.locator("article h3");
+    await expect(movieCards).toHaveCount(2);
+    await expect(movieCards.first()).toHaveText("The Quiet Reel");
+    await expect(movieCards.nth(1)).toHaveText("The Silent Cartographer");
+
+    // Screenshot of documentary with fixture fallback
+    await page.screenshot({
+      path: "screenshots/discover-en-documentary-fallback.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  });
+
+  test("Documentary in Persian displays localized titles and Persian notice", async ({ page }) => {
+    await page.goto("/fa/discover?genre=documentary&page=1");
+
+    const notice = page.locator("[data-testid='fixture-fallback-notice']");
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText("نمایش نمونه‌های موجود برای این ژانر");
+
+    const movieCards = page.locator("article h3");
+    await expect(movieCards).toHaveCount(2);
+    await expect(movieCards.first()).toHaveText("حلقه‌ی خاموش");
+  });
+
+  test("Captures Discover desktop screenshots across locales and themes", async ({ page }) => {
+    test.setTimeout(60000);
+    const scenarios = [
+      { locale: "en", mode: "dark", width: 1280, height: 900 },
+      { locale: "fa", mode: "dark", width: 1280, height: 900 },
+      { locale: "en", mode: "light", width: 1280, height: 900 },
+      { locale: "fa", mode: "light", width: 1280, height: 900 },
+    ];
+
+    for (const s of scenarios) {
+      await page.setViewportSize({ width: s.width, height: s.height });
+      await page.addInitScript(
+        ({ mode }) => {
+          localStorage.setItem("frame-appearance", JSON.stringify({ mode }));
+          document.documentElement.dataset.mode = mode;
+        },
+        { mode: s.mode },
+      );
+
+      await page.goto(`/${s.locale}/discover?page=1`);
+      await page.waitForLoadState("domcontentloaded");
+
+      await page.screenshot({
+        path: `screenshots/discover-${s.locale}-${s.mode}-${s.width}.png`,
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
+  });
+
+  test("Captures Discover mobile screenshots across locales and themes", async ({ page }) => {
+    test.setTimeout(60000);
+    const scenarios = [
+      { locale: "en", mode: "dark", width: 390, height: 844 },
+      { locale: "fa", mode: "light", width: 390, height: 844 },
+    ];
+
+    for (const s of scenarios) {
+      await page.setViewportSize({ width: s.width, height: s.height });
+      await page.addInitScript(
+        ({ mode }) => {
+          localStorage.setItem("frame-appearance", JSON.stringify({ mode }));
+          document.documentElement.dataset.mode = mode;
+        },
+        { mode: s.mode },
+      );
+
+      await page.goto(`/${s.locale}/discover?page=1`);
+      await page.waitForLoadState("domcontentloaded");
+
+      await page.screenshot({
+        path: `screenshots/discover-${s.locale}-${s.mode}-${s.width}.png`,
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
   });
 });

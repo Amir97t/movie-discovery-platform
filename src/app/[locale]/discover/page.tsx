@@ -180,10 +180,20 @@ export default async function DiscoverPage({
             />
           ) : (
             <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-6">
-              <div className="space-y-1">
-                <h2 id="discover-picks-title" className="text-2xl font-bold tracking-tight text-fg">
-                  {t("moviesTitle")}
-                </h2>
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h2 id="discover-picks-title" className="text-2xl font-bold tracking-tight text-fg">
+                    {t("moviesTitle")}
+                  </h2>
+                  {result?.source === "fixture" && (
+                    <span
+                      data-testid="fixture-fallback-notice"
+                      className="inline-flex items-center text-xs font-medium text-accent-text bg-accent/10 border border-accent/20 rounded-full px-2.5 py-0.5 tracking-wide"
+                    >
+                      {t("fixtureNotice")}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
               </div>
 

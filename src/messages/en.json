@@ -115,6 +115,7 @@
     "backToHome": "Back to home",
     "moviesTitle": "Movies",
     "moviesNote": "{count} titles available",
+    "fixtureNotice": "Showing sample titles for this genre.",
     "previous": "Previous",
     "next": "Next",
     "pageInfo": "Page {current} of {total}"

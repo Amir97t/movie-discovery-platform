@@ -8,6 +8,7 @@ import {
   GENRE_ALIASES,
   GENRE_KEY_TO_API_NAME,
   getAllMovies,
+  getGenreFixtureFallback,
   getHeroCandidates,
   getHomeCatalog,
   getMovieById,
@@ -748,11 +749,114 @@ describe("getMoviesByGenre", () => {
     );
   });
 
-  it("valid genre name with HTTP 404 throws MovieNotFoundError", async () => {
+  it("valid genre name (Crime) with HTTP 404 falls back to matching fixtures", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(createMockErrorResponse(404));
 
-    await expect(getMoviesByGenre("Crime", 1)).rejects.toBeInstanceOf(MovieNotFoundError);
+    const result = await getMoviesByGenre("Crime", 1, "en");
+    expect(result.source).toBe("fixture");
+    expect(result.movies.length).toBeGreaterThan(0);
+    for (const movie of result.movies) {
+      expect(movie.genres).toContain("crime");
+    }
+  });
+
+  it("Documentary API 404 returns matching fixtures with accurate count and metadata", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockErrorResponse(404));
+
+    const result = await getMoviesByGenre("Documentary", 1, "en");
+    expect(result.source).toBe("fixture");
+    expect(result.movies).toHaveLength(2);
+    expect(result.metadata.total_count).toBe("2");
+    expect(result.metadata.current_page).toBe("1");
+    expect(result.metadata.per_page).toBe("15");
+    expect(result.metadata.page_count).toBe("1");
+    for (const movie of result.movies) {
+      expect(movie.genres).toContain("documentary");
+    }
+  });
+
+  it("Documentary successful empty response returns matching fixtures", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(
+      createMockResponse([], {
+        current_page: 1,
+        per_page: 12,
+        page_count: 0,
+        total_count: 0,
+      }),
+    );
+
+    const result = await getMoviesByGenre("Documentary", 1, "en");
+    expect(result.source).toBe("fixture");
+    expect(result.movies).toHaveLength(2);
+    for (const movie of result.movies) {
+      expect(movie.genres).toContain("documentary");
+    }
+  });
+
+  it("Documentary network failure returns matching fixtures", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockRejectedValueOnce(new TypeError("Network down"));
+
+    const result = await getMoviesByGenre("Documentary", 1, "en");
+    expect(result.source).toBe("fixture");
+    expect(result.movies).toHaveLength(2);
+    for (const movie of result.movies) {
+      expect(movie.genres).toContain("documentary");
+    }
+  });
+
+  it("Documentary Persian fallback uses localized Persian titles", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockErrorResponse(404));
+
+    const result = await getMoviesByGenre("Documentary", 1, "fa");
+    expect(result.source).toBe("fixture");
+    expect(result.movies).toHaveLength(2);
+    expect(result.movies[0].title).toBe("حلقه‌ی خاموش");
+    for (const movie of result.movies) {
+      expect(movie.genres).toContain("documentary");
+      expect(movie.title.trim()).not.toBe("");
+    }
+  });
+
+  it("valid genre without matching fixtures (Biography) remains empty on empty response", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(
+      createMockResponse([], {
+        current_page: 1,
+        per_page: 12,
+        page_count: 0,
+        total_count: 0,
+      }),
+    );
+
+    const result = await getMoviesByGenre("Biography", 1, "en");
+    expect(result.movies).toHaveLength(0);
+    expect(result.metadata.total_count).toBe("0");
+    expect(result.source).toBe("api");
+  });
+
+  it("valid genre without matching fixtures (Biography) remains empty on API 404 without returning unrelated movies", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockErrorResponse(404));
+
+    const result = await getMoviesByGenre("Biography", 1, "en");
+    expect(result.movies).toHaveLength(0);
+    expect(result.metadata.total_count).toBe("0");
+    expect(result.source).toBe("fixture");
+  });
+
+  it("getGenreFixtureFallback paginates and localizes correctly", () => {
+    const resEn = getGenreFixtureFallback("documentary", 1, "en");
+    expect(resEn.source).toBe("fixture");
+    expect(resEn.movies).toHaveLength(2);
+    expect(resEn.movies[0].title).toBe("The Quiet Reel");
+
+    const resFa = getGenreFixtureFallback("documentary", 1, "fa");
+    expect(resFa.movies[0].title).toBe("حلقه‌ی خاموش");
   });
 
   it("unknown genre name throws MovieNotFoundError without falling back to unrelated fixtures", async () => {
