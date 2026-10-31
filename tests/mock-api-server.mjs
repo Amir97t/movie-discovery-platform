@@ -152,6 +152,11 @@ function createServer() {
       const genreName = decodeURIComponent(genreMatch[1]);
       const page = parseInt(url.searchParams.get("page") || "1", 10);
 
+      if (genreName.toLowerCase() === "documentary") {
+        jsonResponse(res, 404, { error: "Genre not found" });
+        return;
+      }
+
       let genreMovies = [];
       if (genreName === "Sci-Fi") genreMovies = SCI_FI_MOVIES;
       if (genreName === "Crime") genreMovies = CRIME_MOVIES;

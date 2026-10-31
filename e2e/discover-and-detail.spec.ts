@@ -537,6 +537,21 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
     });
   });
 
+  test("Valid genre with successful empty API response (HTTP 200) falls back to matching fixtures", async ({ page }) => {
+    await page.goto("/en/discover?genre=animation&page=1");
+
+    // Verify fixture fallback notice is visible
+    const notice = page.locator("[data-testid='fixture-fallback-notice']");
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText("Showing sample titles for this genre.");
+
+    // Verify animation movie cards from fixtures are rendered
+    const movieCards = page.locator("article h3");
+    await expect(movieCards).toHaveCount(2);
+    await expect(movieCards.first()).toHaveText("Paper Moons Over Harbor City");
+    await expect(movieCards.nth(1)).toHaveText("Aurora Drift");
+  });
+
   test("Documentary in Persian displays localized titles and Persian notice", async ({ page }) => {
     await page.goto("/fa/discover?genre=documentary&page=1");
 
