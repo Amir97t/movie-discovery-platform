@@ -15,6 +15,7 @@ import {
   getMovieByIdDirect,
   getMoviesByGenre,
   getMoviesByPage,
+  getMoviesBySearch,
   MovieNotFoundError,
   paginateItems,
   resolveGenreKey,
@@ -1805,6 +1806,233 @@ describe("Phase 2 & 2.1 - 15-movie pagination, hero candidates and metadata disc
       for (const movie of page1.movies) {
         expect(movie.title.trim()).not.toBe("");
       }
+    });
+  });
+
+  describe("getMoviesBySearch", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.stubGlobal("fetch", vi.fn());
+      clearApiMetadataCache();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("1. constructs correct URLSearchParams for normal English query", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 15,
+          page_count: 1,
+          total_count: 1,
+        }),
+      );
+
+      await getMoviesBySearch("the matrix", 1, "en");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const urlCalled = fetchMock.mock.calls[0][0] as string;
+      expect(urlCalled).toContain("q=the+matrix");
+    });
+
+    it("2. encodes Persian and special characters in query correctly", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 15,
+          page_count: 1,
+          total_count: 1,
+        }),
+      );
+
+      const query = "ماتریکس & جنگ ستارگان";
+      await getMoviesBySearch(query, 1, "fa");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const urlCalled = fetchMock.mock.calls[0][0] as string;
+      const expectedParam = new URLSearchParams({ q: query }).toString();
+      expect(urlCalled).toContain(expectedParam);
+    });
+
+    it("3. preserves requested page parameter", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 2,
+          per_page: 15,
+          page_count: 3,
+          total_count: 35,
+        }),
+      );
+
+      const result = await getMoviesBySearch("action", 2, "en");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const urlCalled = fetchMock.mock.calls[0][0] as string;
+      expect(urlCalled).toContain("page=2");
+      expect(result.metadata.current_page).toBe("2");
+    });
+
+    it("4. normalizes valid API search response correctly", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(
+          [
+            {
+              id: 42,
+              title: "Normalized Search Movie",
+              year: "2021",
+              runtime: "115 min",
+              imdb_rating: "7.9",
+              genres: ["Sci-Fi"],
+              poster: "https://moviesapi.codingfront.dev/images/tt0042.jpg",
+            },
+          ],
+          {
+            current_page: 1,
+            per_page: 15,
+            page_count: 1,
+            total_count: 1,
+          },
+        ),
+      );
+
+      const result = await getMoviesBySearch("search term", 1, "en");
+      expect(result.source).toBe("api");
+      expect(result.movies).toHaveLength(1);
+      const m = result.movies[0];
+      expect(m.id).toBe("42");
+      expect(m.title).toBe("Normalized Search Movie");
+      expect(m.year).toBe(2021);
+      expect(m.runtimeMinutes).toBe(115);
+      expect(m.rating).toBe(7.9);
+      expect(m.genres).toEqual(["scifi"]);
+      expect(m.posterUrl).toBe("https://moviesapi.codingfront.dev/images/tt0042.jpg");
+    });
+
+    it("5. aggregates multi-page API responses and deduplicates movie records", async () => {
+      const fetchMock = vi.mocked(fetch);
+      // First call discovers 12 items/page and total_count = 20
+      const page1 = Array.from({ length: 12 }, (_, i) => ({
+        ...mockMovie,
+        id: i + 1,
+        title: `Movie ${i + 1}`,
+      }));
+      // Page 2 includes duplicate ID 12
+      const page2 = [
+        { ...mockMovie, id: 12, title: "Duplicate Movie 12" },
+        ...Array.from({ length: 7 }, (_, i) => ({
+          ...mockMovie,
+          id: i + 13,
+          title: `Movie ${i + 13}`,
+        })),
+      ];
+
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(page1, {
+          current_page: 1,
+          per_page: 12,
+          page_count: 2,
+          total_count: 20,
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse(page2, {
+          current_page: 2,
+          per_page: 12,
+          page_count: 2,
+          total_count: 20,
+        }),
+      );
+
+      const result = await getMoviesBySearch("hero", 1, "en");
+      expect(result.source).toBe("api");
+      expect(result.movies).toHaveLength(15);
+      expect(result.metadata.per_page).toBe("15");
+
+      // Verify no duplicates
+      const ids = result.movies.map((m) => m.id);
+      expect(new Set(ids).size).toBe(15);
+    });
+
+    it("6. keeps valid API empty response as a genuine empty result without overriding with fixtures", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([], {
+          current_page: 1,
+          per_page: 15,
+          page_count: 0,
+          total_count: 0,
+        }),
+      );
+
+      const result = await getMoviesBySearch("lantern", 1, "en");
+      expect(result.source).toBe("api");
+      expect(result.movies).toHaveLength(0);
+      expect(result.metadata.total_count).toBe("0");
+    });
+
+    it("7. falls back to matching localized fixtures on network error", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockRejectedValue(new TypeError("Network error"));
+
+      // Search for "Lantern" which exists in fixtures ("The Lantern Archive" / "بایگانی فانوس")
+      const enResult = await getMoviesBySearch("lantern", 1, "en");
+      expect(enResult.source).toBe("fixture");
+      expect(enResult.movies.length).toBeGreaterThanOrEqual(1);
+      expect(enResult.movies[0].title).toBe("The Lantern Archive");
+
+      // Search in Persian
+      const faResult = await getMoviesBySearch("فانوس", 1, "fa");
+      expect(faResult.source).toBe("fixture");
+      expect(faResult.movies.length).toBeGreaterThanOrEqual(1);
+      expect(faResult.movies[0].title).toBe("بایگانی فانوس");
+    });
+
+    it("8. falls back safely to fixtures on malformed API response", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => ({ data: "corrupted_non_array_payload" }),
+      } as unknown as Response);
+
+      const result = await getMoviesBySearch("paper moons", 1, "en");
+      expect(result.source).toBe("fixture");
+      expect(result.movies.length).toBeGreaterThanOrEqual(1);
+      expect(result.movies[0].title).toBe("Paper Moons Over Harbor City");
+    });
+
+    it("9. avoids making network requests for empty or whitespace query", async () => {
+      const fetchMock = vi.mocked(fetch);
+
+      const res1 = await getMoviesBySearch("", 1, "en");
+      expect(res1.movies).toHaveLength(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      const res2 = await getMoviesBySearch("   ", 1, "en");
+      expect(res2.movies).toHaveLength(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("10. normalizes invalid page input safely to page 1", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse([mockMovie], {
+          current_page: 1,
+          per_page: 15,
+          page_count: 1,
+          total_count: 1,
+        }),
+      );
+
+      const result = await getMoviesBySearch("query", -3 as number, "en");
+      expect(result.metadata.current_page).toBe("1");
+      const urlCalled = fetchMock.mock.calls[0][0] as string;
+      expect(urlCalled).toContain("page=1");
     });
   });
 });

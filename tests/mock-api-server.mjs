@@ -96,10 +96,54 @@ function createServer() {
       return;
     }
 
-    // GET /api/v1/movies?page=N
+    // GET /api/v1/movies?q={query}&page={page} or GET /api/v1/movies?page=N
     const moviesListMatch = url.pathname.match(/^\/api\/v1\/movies$/);
     if (moviesListMatch && req.method === "GET") {
+      const q = url.searchParams.get("q");
       const page = parseInt(url.searchParams.get("page") || "1", 10);
+
+      if (q !== null) {
+        if (q === "fail_500" || q.toLowerCase() === "lantern" || q === "فانوس") {
+          jsonResponse(res, 500, { error: "Simulated search failure" });
+          return;
+        }
+        if (q === "fail_malformed") {
+          res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+          res.end("INVALID JSON CORRUPTION");
+          return;
+        }
+
+        const normQ = q.trim().toLowerCase();
+        let matched = [];
+        if (normQ) {
+          matched = [...ALL_MOVIES, ...SCI_FI_MOVIES, ...CRIME_MOVIES].filter((m) =>
+            m.title.toLowerCase().includes(normQ),
+          );
+        }
+
+        const seenIds = new Set();
+        const uniqueMatched = [];
+        for (const m of matched) {
+          if (!seenIds.has(m.id)) {
+            seenIds.add(m.id);
+            uniqueMatched.push(m);
+          }
+        }
+
+        const start = (page - 1) * 12;
+        const pageMovies = uniqueMatched.slice(start, start + 12);
+        jsonResponse(res, 200, {
+          data: pageMovies,
+          metadata: {
+            current_page: String(page),
+            per_page: "12",
+            page_count: String(Math.ceil(uniqueMatched.length / 12)),
+            total_count: String(uniqueMatched.length),
+          },
+        });
+        return;
+      }
+
       const start = (page - 1) * 12;
       const pageMovies = ALL_MOVIES.slice(start, start + 12);
       jsonResponse(res, 200, {

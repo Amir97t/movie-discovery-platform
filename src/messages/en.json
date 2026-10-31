@@ -5,7 +5,8 @@
   },
   "a11y": {
     "skipToContent": "Skip to main content",
-    "brandHome": "FRAME — go to home"
+    "brandHome": "FRAME — go to home",
+    "searchMovies": "Search movies"
   },
   "nav": {
     "label": "Primary navigation",
@@ -135,5 +136,25 @@
     "comingSoonDescription": "User profiles, preferences, and personal recommendations will be available here in a future update.",
     "backToHome": "Back to home",
     "goToDiscover": "Discover movies"
+  },
+  "search": {
+    "title": "Search",
+    "subtitle": "Find movies across the catalog",
+    "inputLabel": "Search query",
+    "inputPlaceholder": "Search by title, director, or keyword…",
+    "submit": "Search",
+    "moviesTitle": "Search results",
+    "moviesNote": "{count} titles found",
+    "noQueryTitle": "Explore the catalog",
+    "noQueryDescription": "Enter a movie title or keyword above to find movies.",
+    "noResultsTitle": "No movies found",
+    "noResultsDescription": "We couldn't find any movies matching \"{query}\". Try checking for typos or searching for a different term.",
+    "fixtureNotice": "Live search unavailable. Showing matching sample titles.",
+    "errorTitle": "Search temporarily unavailable",
+    "errorDescription": "We encountered an issue while searching the catalog. Please try again.",
+    "retry": "Try again",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} of {total}"
   }
 }

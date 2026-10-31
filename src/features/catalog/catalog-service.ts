@@ -748,3 +748,134 @@ export async function getAllMovies(locale: CatalogLocale): Promise<Movie[]> {
     return FIXTURE_MOVIES.map((movie) => fixtureToMovie(movie, locale));
   }
 }
+
+/**
+ * Normalizes text for search matching, handling case insensitivity in English
+ * and common Persian/Arabic character variations (yeh, kaf, diacritics, and zero-width spaces).
+ */
+export function normalizeSearchText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, "") // remove Arabic diacritics
+    .replace(/\u064A/g, "\u06CC") // Arabic yeh (ي) -> Persian yeh (ی)
+    .replace(/\u0643/g, "\u06A9") // Arabic kaf (ك) -> Persian kaf (ک)
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width joiners/spaces
+    .trim();
+}
+
+/**
+ * Deterministically checks whether a fixture movie matches a search query.
+ * Matches against localized title, localized synopsis, and genres.
+ */
+export function matchFixture(
+  fixture: FixtureMovie,
+  query: string,
+  locale: CatalogLocale,
+): boolean {
+  const normQ = normalizeSearchText(query);
+  if (!normQ) return false;
+
+  // Title matching in requested locale or bilingual fallback
+  const locTitle = normalizeSearchText(fixture.title[locale] ?? "");
+  const enTitle = normalizeSearchText(fixture.title.en);
+  const faTitle = normalizeSearchText(fixture.title.fa);
+  if (locTitle.includes(normQ) || enTitle.includes(normQ) || faTitle.includes(normQ)) {
+    return true;
+  }
+
+  // Synopsis matching
+  if (fixture.synopsis) {
+    const locSyn = normalizeSearchText(fixture.synopsis[locale] ?? "");
+    const enSyn = normalizeSearchText(fixture.synopsis.en);
+    const faSyn = normalizeSearchText(fixture.synopsis.fa);
+    if (locSyn.includes(normQ) || enSyn.includes(normQ) || faSyn.includes(normQ)) {
+      return true;
+    }
+  }
+
+  // Genre matching
+  if (fixture.genres.some((g) => normalizeSearchText(g).includes(normQ))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Paginates matching local fixture movies for a query when the live API is unavailable.
+ * Localizes movie records and calculates accurate 15-item pagination metadata.
+ */
+export function getSearchFixtureFallback(
+  query: string,
+  page: number,
+  locale: CatalogLocale,
+): {
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "fixture";
+} {
+  const safePage = Math.max(1, page);
+  const trimmed = query.trim().replace(/\s+/g, " ");
+  const matchingFixtures = trimmed
+    ? FIXTURE_MOVIES.filter((m) => matchFixture(m, trimmed, locale))
+    : [];
+  const localized = matchingFixtures.map((m) => fixtureToMovie(m, locale));
+  const paginated = paginateItems(localized, safePage, APPLICATION_PAGE_SIZE);
+
+  return {
+    movies: paginated.items,
+    metadata: paginated.metadata,
+    source: "fixture",
+  };
+}
+
+/**
+ * Searches movies using the documented API endpoint:
+ * GET /api/v1/movies?q={query}&page={page}
+ *
+ * Requirements:
+ * 1. Trims query and normalizes whitespace safely.
+ * 2. Avoids network requests for an empty query.
+ * 3. Encodes query into the `q` parameter using URLSearchParams.
+ * 4. Preserves requested logical page with 15-item aggregation.
+ * 5. Preserves API ordering and global ID deduplication.
+ * 6. Returns a valid API empty result when total_count is 0 without overriding it with fixtures.
+ * 7. Falls back to matching localized fixtures when the API fails, times out, or returns invalid data.
+ */
+export async function getMoviesBySearch(
+  query: string,
+  page: number = 1,
+  locale: CatalogLocale = "en",
+): Promise<{
+  movies: Movie[];
+  metadata: { current_page: string; per_page: string; page_count: string; total_count: string };
+  source: "api" | "fixture";
+}> {
+  const trimmedQuery = query ? query.trim().replace(/\s+/g, " ") : "";
+  const num = Number(page);
+  const safePage = Number.isFinite(num) && num >= 1 ? Math.floor(num) : 1;
+
+  if (!trimmedQuery) {
+    return {
+      movies: [],
+      metadata: {
+        current_page: String(safePage),
+        per_page: String(APPLICATION_PAGE_SIZE),
+        page_count: "0",
+        total_count: "0",
+      },
+      source: "fixture",
+    };
+  }
+
+  const params = new URLSearchParams();
+  params.set("q", trimmedQuery);
+  const searchBaseUrl = `${MOVIES_API_ORIGIN}/api/v1/movies?${params.toString()}`;
+
+  try {
+    const apiResult = await fetchPaginatedMoviesFromApi(searchBaseUrl, safePage);
+    return apiResult;
+  } catch {
+    return getSearchFixtureFallback(trimmedQuery, safePage, locale);
+  }
+}

@@ -452,14 +452,19 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
 
     // Start continuous animation frame tracker in browser before triggering navigation
     await page.evaluate(() => {
-      const win = window as unknown as { __animSamples: number[] };
+      const win = window as unknown as { __animSamples: number[]; __stretchClasses: string[] };
       win.__animSamples = [];
+      win.__stretchClasses = [];
       function record() {
         const ind = document.querySelector("[data-testid='desktop-nav-indicator']");
         if (ind) {
           win.__animSamples.push(ind.getBoundingClientRect().left);
+          const span = ind.querySelector("span");
+          if (span && span.className) {
+            win.__stretchClasses.push(span.className);
+          }
         }
-        if (win.__animSamples.length < 25) {
+        if (win.__animSamples.length < 35) {
           requestAnimationFrame(record);
         }
       }
@@ -469,18 +474,22 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     // Trigger navigation
     await discoverLink.click();
 
-    // Verify directional stretch animation is immediately applied on the inner capsule
-    const innerSpan = indicator.locator("span");
-    await expect(innerSpan).toHaveClass(/animate-liquid-stretch-right/);
-
     // Capture in-flight screenshot during active spring stretch
     await page.screenshot({ path: "screenshots/nav-transition-in-progress.png" });
 
     // Inspect sampled animation frames recorded across browser animation frames
-    const samples: number[] = await page.evaluate(
-      () => (window as unknown as { __animSamples?: number[] }).__animSamples ?? [],
-    );
+    const { samples, stretchClasses } = await page.evaluate(() => {
+      const win = window as unknown as { __animSamples?: number[]; __stretchClasses?: string[] };
+      return {
+        samples: win.__animSamples ?? [],
+        stretchClasses: win.__stretchClasses ?? [],
+      };
+    });
     expect(samples.length).toBeGreaterThan(3);
+
+    // Verify directional stretch animation was applied during transition
+    const hadStretch = stretchClasses.some((c) => c.includes("animate-liquid-stretch-right"));
+    expect(hadStretch).toBe(true);
 
     // Verify indicator traveled continuously: there are frames between start and destination
     const intermediateFrame = samples.find(
@@ -494,6 +503,7 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     expect(Math.abs(settledBox!.x - discoverBox!.x)).toBeLessThanOrEqual(4);
 
     // Directional stretch class has cleared after animation settles
+    const innerSpan = indicator.locator("span");
     await expect(innerSpan).not.toHaveClass(/animate-liquid-stretch-right/);
   });
 
