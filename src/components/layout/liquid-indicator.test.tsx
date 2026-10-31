@@ -37,6 +37,7 @@ describe("useLiquidIndicator", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("returns isVisible false when container has no active element", () => {
@@ -209,6 +210,71 @@ describe("useLiquidIndicator", () => {
     expect(result.current.isVisible).toBe(true);
     expect(result.current.rect?.x).toBe(40);
     expect(result.current.stretchClass).toBe(""); // no fake travel animation
+  });
+
+  it("preserves directional stretch and transition when navigating immediately after initial ResizeObserver notification", () => {
+    let resizeCallback: (() => void) | null = null;
+    class MockResizeObserver {
+      constructor(cb: () => void) {
+        resizeCallback = cb;
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    const container = document.createElement("ul");
+    const activeItem = document.createElement("a");
+    activeItem.setAttribute("aria-current", "page");
+    container.appendChild(activeItem);
+
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 500,
+      height: 60,
+      right: 500,
+      bottom: 60,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    let currentItemLeft = 50;
+    vi.spyOn(activeItem, "getBoundingClientRect").mockImplementation(() => ({
+      left: currentItemLeft,
+      top: 10,
+      width: 80,
+      height: 40,
+      right: currentItemLeft + 80,
+      bottom: 50,
+      x: currentItemLeft,
+      y: 10,
+      toJSON: () => {},
+    }));
+
+    const ref = { current: container };
+    const { result, rerender } = renderHook(({ path }) => useLiquidIndicator(ref, path), {
+      initialProps: { path: "/" },
+    });
+
+    // 1. Initial render on visible container
+    expect(result.current.isVisible).toBe(true);
+    expect(result.current.rect?.x).toBe(50);
+
+    // 2. Simulate the browser delivering the initial ResizeObserver notification for the visible container
+    act(() => {
+      resizeCallback?.();
+    });
+
+    // 3. Immediately navigate to another route and change active item geometry
+    currentItemLeft = 180;
+    rerender({ path: "/discover" });
+
+    // 4. Assert stretch class is applied and normal transition remains enabled (not suppressed by isResizing)
+    expect(result.current.rect?.x).toBe(180);
+    expect(result.current.stretchClass).toBe("animate-liquid-stretch-right");
+    expect(result.current.wrapperStyle.transition).not.toBe("none");
   });
 });
 

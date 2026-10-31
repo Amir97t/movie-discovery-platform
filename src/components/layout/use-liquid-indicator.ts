@@ -126,6 +126,8 @@ export function useLiquidIndicator(
 
     if (!prevRectRef.current) {
       // First measurement while visible: apply immediately without animation
+      const cRect = container.getBoundingClientRect();
+      prevContainerSizeRef.current = { width: cRect.width, height: cRect.height };
       setRect(nextRect);
       prevRectRef.current = nextRect;
       isReadyRef.current = true;
@@ -154,9 +156,13 @@ export function useLiquidIndicator(
       const cRect = container.getBoundingClientRect();
       const prev = prevContainerSizeRef.current;
       // Only act if container dimensions actually changed (breakpoint or window resize)
-      if (Math.abs(cRect.width - prev.width) < 1 && Math.abs(cRect.height - prev.height) < 1) {
-        return;
+      if (prev.width > 0 && prev.height > 0) {
+        if (Math.abs(cRect.width - prev.width) < 1 && Math.abs(cRect.height - prev.height) < 1) {
+          return;
+        }
       }
+
+      const isInitialBaseline = prev.width === 0 && prev.height === 0;
       prevContainerSizeRef.current = { width: cRect.width, height: cRect.height };
 
       const nextRect = measureActiveRect(container);
@@ -165,12 +171,15 @@ export function useLiquidIndicator(
         return;
       }
 
-      if (!isReadyRef.current || !prevRectRef.current) {
-        // Breakpoint transition from hidden to visible: initialize immediately without transition
+      if (!isReadyRef.current || !prevRectRef.current || isInitialBaseline) {
+        // Breakpoint transition from hidden to visible or initial baseline notification:
+        // initialize immediately without triggering resize suppression
         setRect(nextRect);
         prevRectRef.current = nextRect;
-        isReadyRef.current = true;
-        setIsReady(true);
+        if (!isReadyRef.current) {
+          isReadyRef.current = true;
+          setIsReady(true);
+        }
         return;
       }
 

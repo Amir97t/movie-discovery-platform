@@ -265,6 +265,25 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     const indicator = page.locator("[data-testid='mobile-nav-indicator']");
     await expect(indicator).toBeVisible();
 
+    // Confirm navigation retains 4 items
+    const links = mobileNav.locator("a");
+    await expect(links).toHaveCount(4);
+
+    // Measure all four link bounding boxes before navigation
+    const initialBoxes = [];
+    for (let i = 0; i < 4; i++) {
+      const box = await links.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      initialBoxes.push(box!);
+    }
+
+    // Assert their widths are equal within a small pixel tolerance in the 4-column grid
+    const firstWidth = initialBoxes[0].width;
+    for (const box of initialBoxes) {
+      expect(Math.abs(box.width - firstWidth)).toBeLessThanOrEqual(1.5);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+
     // In RTL, Home ("خانه") is the rightmost item
     const homeLink = mobileNav.locator("a[aria-current='page']");
     await expect(homeLink).toHaveText(/خانه/);
@@ -284,9 +303,17 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     const dIndBox = await indicator.boundingBox();
     expect(Math.abs(dIndBox!.x - dBox!.x)).toBeLessThanOrEqual(4);
 
-    // Confirm navigation retains 4 items and min-height 56
-    const links = mobileNav.locator("a");
-    await expect(links).toHaveCount(4);
+    // Confirm route transition does not shift grid columns or change touch-target heights
+    for (let i = 0; i < 4; i++) {
+      const afterBox = await links.nth(i).boundingBox();
+      expect(afterBox).not.toBeNull();
+      expect(Math.abs(afterBox!.x - initialBoxes[i].x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(afterBox!.width - initialBoxes[i].width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(afterBox!.y - initialBoxes[i].y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(afterBox!.height - initialBoxes[i].height)).toBeLessThanOrEqual(1);
+      expect(afterBox!.height).toBeGreaterThanOrEqual(44);
+    }
+
     const navBox = await mobileNav.boundingBox();
     expect(navBox?.height).toBeGreaterThanOrEqual(56);
 
@@ -317,6 +344,33 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     await page.keyboard.press("Tab");
     const discoverLink = page.locator("header nav a:has-text('Discover')");
     await expect(discoverLink).toBeFocused();
+
+    // Assert computed :focus-visible outline style and width are actually visible
+    const outlineInfo = await discoverLink.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+        zIndex: style.zIndex,
+      };
+    });
+    expect(outlineInfo.outlineStyle).not.toBe("none");
+    expect(parseFloat(outlineInfo.outlineWidth)).toBeGreaterThanOrEqual(1);
+
+    // Confirm indicator remains decorative and does not overlap or obscure the link's focus outline
+    const indicatorInfo = await indicator.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        pointerEvents: style.pointerEvents,
+        zIndex: style.zIndex,
+        ariaHidden: el.getAttribute("aria-hidden"),
+      };
+    });
+    expect(indicatorInfo.ariaHidden).toBe("true");
+    expect(indicatorInfo.pointerEvents).toBe("none");
+    const linkZ = parseInt(outlineInfo.zIndex) || 0;
+    const indZ = parseInt(indicatorInfo.zIndex) || 0;
+    expect(linkZ).toBeGreaterThan(indZ);
 
     // Indicator has not received focus
     expect(await indicator.evaluate((el) => document.activeElement === el)).toBe(false);
