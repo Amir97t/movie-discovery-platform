@@ -151,6 +151,65 @@ describe("useLiquidIndicator", () => {
     expect(result.current.rect?.x).toBe(50);
     expect(result.current.stretchClass).toBe("animate-liquid-stretch-left");
   });
+
+  it("initializes without travel animation when crossing from hidden to visible breakpoint", () => {
+    let resizeCallback: (() => void) | null = null;
+    class MockResizeObserver {
+      constructor(cb: () => void) {
+        resizeCallback = cb;
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    const container = document.createElement("ul");
+    const activeItem = document.createElement("a");
+    activeItem.setAttribute("aria-current", "page");
+    container.appendChild(activeItem);
+
+    // Initially hidden (0 width)
+    let containerWidth = 0;
+    vi.spyOn(container, "getBoundingClientRect").mockImplementation(() => ({
+      left: 0,
+      top: 0,
+      width: containerWidth,
+      height: containerWidth > 0 ? 60 : 0,
+      right: containerWidth,
+      bottom: containerWidth > 0 ? 60 : 0,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    }));
+
+    vi.spyOn(activeItem, "getBoundingClientRect").mockImplementation(() => ({
+      left: containerWidth > 0 ? 40 : 0,
+      top: 10,
+      width: containerWidth > 0 ? 80 : 0,
+      height: containerWidth > 0 ? 40 : 0,
+      right: containerWidth > 0 ? 120 : 0,
+      bottom: 50,
+      x: containerWidth > 0 ? 40 : 0,
+      y: 10,
+      toJSON: () => {},
+    }));
+
+    const ref = { current: container };
+    const { result } = renderHook(() => useLiquidIndicator(ref, "/"));
+
+    expect(result.current.isVisible).toBe(false);
+    expect(result.current.rect).toBeNull();
+
+    // Cross breakpoint: container becomes visible
+    containerWidth = 500;
+    act(() => {
+      resizeCallback?.();
+    });
+
+    expect(result.current.isVisible).toBe(true);
+    expect(result.current.rect?.x).toBe(40);
+    expect(result.current.stretchClass).toBe(""); // no fake travel animation
+  });
 });
 
 describe("DesktopNav and MobileNavigation components", () => {

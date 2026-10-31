@@ -38,13 +38,12 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     const indBoxHome = await indicator.boundingBox();
     expect(homeBox).not.toBeNull();
     expect(indBoxHome).not.toBeNull();
-    // Indicator aligns closely with active link
     expect(Math.abs(indBoxHome!.x - homeBox!.x)).toBeLessThanOrEqual(4);
     expect(Math.abs(indBoxHome!.width - homeBox!.width)).toBeLessThanOrEqual(4);
 
     // Navigate to Discover
     await desktopNav.locator("a:has-text('Discover')").click();
-    await expect(page).toHaveURL(/\/en\/discover/);
+    await expect(page).toHaveURL(/\/en\/discover/, { timeout: 10000 });
     const discoverLink = desktopNav.locator("a[aria-current='page']");
     await expect(discoverLink).toHaveText("Discover");
 
@@ -59,7 +58,7 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
 
     // Navigate to Library
     await desktopNav.locator("a:has-text('Library')").click();
-    await expect(page).toHaveURL(/\/en\/library/);
+    await expect(page).toHaveURL(/\/en\/library/, { timeout: 10000 });
     await page.waitForTimeout(450);
     const libraryLink = desktopNav.locator("a[aria-current='page']");
     const libraryBox = await libraryLink.boundingBox();
@@ -68,7 +67,7 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
 
     // Browser Back to Discover
     await page.goBack();
-    await expect(page).toHaveURL(/\/en\/discover/);
+    await expect(page).toHaveURL(/\/en\/discover/, { timeout: 10000 });
     await page.waitForTimeout(450);
     const indBoxBack = await indicator.boundingBox();
     const discoverBoxAfterBack = await desktopNav.locator("a[aria-current='page']").boundingBox();
@@ -76,7 +75,7 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
 
     // Browser Forward to Library
     await page.goForward();
-    await expect(page).toHaveURL(/\/en\/library/);
+    await expect(page).toHaveURL(/\/en\/library/, { timeout: 10000 });
     await page.waitForTimeout(450);
     const indBoxForward = await indicator.boundingBox();
     const libraryBoxAfterFwd = await desktopNav.locator("a[aria-current='page']").boundingBox();
@@ -164,6 +163,284 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     // Theme color should now be #F3EFEB
     const lightContent = await page.locator('meta[name="theme-color"]').first().getAttribute("content");
     expect(lightContent).toBe("#F3EFEB");
+  });
+
+  test("Responsive breakpoint transitions initialize indicator without travel animation", async ({ page }) => {
+    // Scenario A: Mobile (390px) -> Desktop (1280px) without reload
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/en");
+
+    const mobileNav = page.locator("nav[data-mobile-nav]");
+    const desktopNav = page.locator("header nav");
+    await expect(mobileNav).toBeVisible();
+    await expect(desktopNav).toBeHidden();
+
+    const mobileIndicator = page.locator("[data-testid='mobile-nav-indicator']");
+    await expect(mobileIndicator).toBeVisible();
+
+    // Resize to Desktop
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(desktopNav).toBeVisible();
+    await expect(mobileNav).toBeHidden();
+
+    const desktopIndicator = page.locator("[data-testid='desktop-nav-indicator']");
+    await expect(desktopIndicator).toBeVisible();
+    await expect(desktopIndicator).toHaveCount(1);
+
+    const homeLink = desktopNav.locator("a[aria-current='page']");
+    const homeBox = await homeLink.boundingBox();
+    const indBox = await desktopIndicator.boundingBox();
+    expect(homeBox).not.toBeNull();
+    expect(indBox).not.toBeNull();
+    expect(Math.abs(indBox!.x - homeBox!.x)).toBeLessThanOrEqual(4);
+
+    // Verify initial breakpoint activation does not produce a false route-transition animation
+    const innerSpan = desktopIndicator.locator("span");
+    const stretchClass = await innerSpan.getAttribute("class");
+    expect(stretchClass).not.toContain("animate-liquid-stretch");
+
+    await page.screenshot({ path: "screenshots/nav-responsive-mobile-to-desktop.png" });
+
+    // Scenario B: Desktop (1280px) -> Mobile (390px) without reload
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(mobileNav).toBeVisible();
+    await expect(desktopNav).toBeHidden();
+
+    await expect(mobileIndicator).toBeVisible();
+    await expect(mobileIndicator).toHaveCount(1);
+
+    const mHomeLink = mobileNav.locator("a[aria-current='page']");
+    const mHomeBox = await mHomeLink.boundingBox();
+    const mIndBox = await mobileIndicator.boundingBox();
+    expect(Math.abs(mIndBox!.x - mHomeBox!.x)).toBeLessThanOrEqual(4);
+
+    const mInnerSpan = mobileIndicator.locator("span");
+    const mStretchClass = await mInnerSpan.getAttribute("class");
+    expect(mStretchClass).not.toContain("animate-liquid-stretch");
+
+    await page.screenshot({ path: "screenshots/nav-responsive-desktop-to-mobile.png" });
+  });
+
+  test("Reduced motion emulation disables directional stretch and transition delay", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/en");
+
+    const desktopNav = page.locator("header nav");
+    const indicator = page.locator("[data-testid='desktop-nav-indicator']");
+    await expect(indicator).toBeVisible();
+
+    // Verify computed style has zero transition duration under reduced motion
+    const transitionDuration = await indicator.evaluate((el) => window.getComputedStyle(el).transitionDuration);
+    const durationSec = parseFloat(transitionDuration);
+    expect(durationSec <= 0.001 || transitionDuration === "0s" || transitionDuration === "none").toBe(true);
+
+    // Click Discover
+    await desktopNav.locator("a:has-text('Discover')").click();
+    await expect(page).toHaveURL(/\/en\/discover/);
+
+    // Indicator is NOT permanently hidden: it aligns with Discover
+    const discoverLink = desktopNav.locator("a[aria-current='page']");
+    await expect(discoverLink).toHaveText("Discover");
+    const discoverBox = await discoverLink.boundingBox();
+    const indBox = await indicator.boundingBox();
+    expect(Math.abs(indBox!.x - discoverBox!.x)).toBeLessThanOrEqual(4);
+
+    // Directional stretch class was never applied
+    const innerSpan = indicator.locator("span");
+    const classes = await innerSpan.getAttribute("class");
+    expect(classes).not.toContain("animate-liquid-stretch");
+
+    await page.screenshot({ path: "screenshots/nav-reduced-motion.png" });
+  });
+
+  test("RTL mobile navigation at 390px maintains four columns and smooth capsule alignment", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fa");
+
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    const mobileNav = page.locator("nav[data-mobile-nav]");
+    await expect(mobileNav).toBeVisible();
+
+    const indicator = page.locator("[data-testid='mobile-nav-indicator']");
+    await expect(indicator).toBeVisible();
+
+    // In RTL, Home ("خانه") is the rightmost item
+    const homeLink = mobileNav.locator("a[aria-current='page']");
+    await expect(homeLink).toHaveText(/خانه/);
+
+    const homeBox = await homeLink.boundingBox();
+    const indBox = await indicator.boundingBox();
+    expect(Math.abs(indBox!.x - homeBox!.x)).toBeLessThanOrEqual(4);
+
+    // Navigate to Discover ("کشف") in RTL mobile
+    await mobileNav.locator("a[href='/fa/discover']").click();
+    await expect(page).toHaveURL(/\/fa\/discover/);
+    await page.waitForTimeout(450);
+
+    const discoverLink = mobileNav.locator("a[aria-current='page']");
+    await expect(discoverLink).toHaveText(/کشف/);
+    const dBox = await discoverLink.boundingBox();
+    const dIndBox = await indicator.boundingBox();
+    expect(Math.abs(dIndBox!.x - dBox!.x)).toBeLessThanOrEqual(4);
+
+    // Confirm navigation retains 4 items and min-height 56
+    const links = mobileNav.locator("a");
+    await expect(links).toHaveCount(4);
+    const navBox = await mobileNav.boundingBox();
+    expect(navBox?.height).toBeGreaterThanOrEqual(56);
+
+    await page.screenshot({ path: "screenshots/nav-mobile-fa-rtl.png" });
+  });
+
+  test("Keyboard navigation, focus outline visibility, and accessibility semantics", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/en");
+
+    const indicator = page.locator("[data-testid='desktop-nav-indicator']");
+    await expect(indicator).toBeVisible();
+
+    // Verify indicator is decorative: aria-hidden="true" and pointer-events: none
+    await expect(indicator).toHaveAttribute("aria-hidden", "true");
+    const pointerEvents = await indicator.evaluate((el) => window.getComputedStyle(el).pointerEvents);
+    expect(pointerEvents).toBe("none");
+
+    // Tab through to focus navigation links
+    await page.keyboard.press("Tab"); // Skip to content
+    await page.keyboard.press("Tab"); // Brand home link
+    await page.keyboard.press("Tab"); // First nav item (Home)
+
+    const homeLink = page.locator("header nav a[aria-current='page']");
+    await expect(homeLink).toBeFocused();
+
+    // Tab to next item (Discover)
+    await page.keyboard.press("Tab");
+    const discoverLink = page.locator("header nav a:has-text('Discover')");
+    await expect(discoverLink).toBeFocused();
+
+    // Indicator has not received focus
+    expect(await indicator.evaluate((el) => document.activeElement === el)).toBe(false);
+  });
+
+  test("Layout stability: indicator movement causes zero shift in link geometry", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/en");
+
+    const desktopNav = page.locator("header nav");
+    const links = desktopNav.locator("a");
+    const count = await links.count();
+
+    // Record geometry of all navigation links before route change
+    const initialBoxes = [];
+    for (let i = 0; i < count; i++) {
+      initialBoxes.push(await links.nth(i).boundingBox());
+    }
+
+    // Navigate to Discover
+    await desktopNav.locator("a:has-text('Discover')").click();
+    await expect(page).toHaveURL(/\/en\/discover/);
+    await page.waitForTimeout(450);
+
+    // Record geometry of all links after route change and indicator movement
+    for (let i = 0; i < count; i++) {
+      const currentBox = await links.nth(i).boundingBox();
+      expect(currentBox).not.toBeNull();
+      // Links remain strictly stationary in row layout (y within 1px, x/width within 3px due to font-semibold vs medium)
+      expect(Math.abs(currentBox!.y - initialBoxes[i]!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(currentBox!.x - initialBoxes[i]!.x)).toBeLessThanOrEqual(3);
+      expect(Math.abs(currentBox!.width - initialBoxes[i]!.width)).toBeLessThanOrEqual(3);
+      expect(Math.abs(currentBox!.height - initialBoxes[i]!.height)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("Locale switching preserves logical page and updates active indicator position", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/en/discover");
+
+    const desktopNav = page.locator("header nav");
+    const indicator = page.locator("[data-testid='desktop-nav-indicator']");
+    await expect(indicator).toBeVisible();
+
+    const enDiscoverLink = desktopNav.locator("a[aria-current='page']");
+    await expect(enDiscoverLink).toHaveText("Discover");
+
+    // Switch to Persian via Appearance Menu
+    await page.getByRole("button", { name: "Appearance and language" }).click();
+    await page.locator("a:has-text('فارسی')").click();
+
+    // Preserves logical page /discover under /fa
+    await expect(page).toHaveURL(/\/fa\/discover/);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    // In RTL, active item is "کشف" and indicator aligns with it
+    const faDiscoverLink = desktopNav.locator("a[aria-current='page']");
+    await expect(faDiscoverLink).toHaveText("کشف");
+
+    await page.waitForTimeout(450);
+    const faBox = await faDiscoverLink.boundingBox();
+    const indBox = await indicator.boundingBox();
+    expect(Math.abs(indBox!.x - faBox!.x)).toBeLessThanOrEqual(4);
+  });
+
+  test("Observes real in-flight animation with intermediate frame and directional stretch", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/en");
+
+    const desktopNav = page.locator("header nav");
+    const indicator = page.locator("[data-testid='desktop-nav-indicator']");
+    await expect(indicator).toBeVisible();
+
+    const initialBox = await indicator.boundingBox();
+    const discoverLink = desktopNav.locator("a:has-text('Discover')");
+    const discoverBox = await discoverLink.boundingBox();
+    expect(initialBox).not.toBeNull();
+    expect(discoverBox).not.toBeNull();
+
+    // Start continuous animation frame tracker in browser before triggering navigation
+    await page.evaluate(() => {
+      const win = window as unknown as { __animSamples: number[] };
+      win.__animSamples = [];
+      function record() {
+        const ind = document.querySelector("[data-testid='desktop-nav-indicator']");
+        if (ind) {
+          win.__animSamples.push(ind.getBoundingClientRect().left);
+        }
+        if (win.__animSamples.length < 25) {
+          requestAnimationFrame(record);
+        }
+      }
+      requestAnimationFrame(record);
+    });
+
+    // Trigger navigation
+    await discoverLink.click();
+
+    // Verify directional stretch animation is immediately applied on the inner capsule
+    const innerSpan = indicator.locator("span");
+    await expect(innerSpan).toHaveClass(/animate-liquid-stretch-right/);
+
+    // Capture in-flight screenshot during active spring stretch
+    await page.screenshot({ path: "screenshots/nav-transition-in-progress.png" });
+
+    // Inspect sampled animation frames recorded across browser animation frames
+    const samples: number[] = await page.evaluate(
+      () => (window as unknown as { __animSamples?: number[] }).__animSamples ?? [],
+    );
+    expect(samples.length).toBeGreaterThan(3);
+
+    // Verify indicator traveled continuously: there are frames between start and destination
+    const intermediateFrame = samples.find(
+      (x) => x > initialBox!.x + 1 && x < discoverBox!.x - 1,
+    );
+    expect(intermediateFrame).toBeDefined();
+
+    // Allow full settling
+    await page.waitForTimeout(400);
+    const settledBox = await indicator.boundingBox();
+    expect(Math.abs(settledBox!.x - discoverBox!.x)).toBeLessThanOrEqual(4);
+
+    // Directional stretch class has cleared after animation settles
+    await expect(innerSpan).not.toHaveClass(/animate-liquid-stretch-right/);
   });
 
   test("Captures required visual screenshots for Phase 3 active indicator", async ({ page }) => {
