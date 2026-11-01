@@ -140,6 +140,17 @@ export default async function SearchPage({
               </Link>
             }
           />
+        ) : result?.source === "fixture" && items.length === 0 ? (
+          <EmptyState
+            icon={<TriangleAlert className="size-10" />}
+            title={t("fallbackEmptyTitle")}
+            description={t("fallbackEmptyDescription")}
+            action={
+              <Link href={buildPageUrl(1)} className={buttonStyles({ size: "md" })}>
+                {t("retry")}
+              </Link>
+            }
+          />
         ) : items.length === 0 ? (
           <EmptyState
             icon={<SearchX className="size-10" />}

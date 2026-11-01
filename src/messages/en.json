@@ -149,6 +149,8 @@
     "noQueryDescription": "Enter a movie title or keyword above to find movies.",
     "noResultsTitle": "No movies found",
     "noResultsDescription": "We couldn't find any movies matching \"{query}\". Try checking for typos or searching for a different term.",
+    "fallbackEmptyTitle": "Live search unavailable",
+    "fallbackEmptyDescription": "The search service is currently unreachable and no matching sample titles were found in local fixtures.",
     "fixtureNotice": "Live search unavailable. Showing matching sample titles.",
     "errorTitle": "Search temporarily unavailable",
     "errorDescription": "We encountered an issue while searching the catalog. Please try again.",

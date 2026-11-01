@@ -103,7 +103,7 @@ function createServer() {
       const page = parseInt(url.searchParams.get("page") || "1", 10);
 
       if (q !== null) {
-        if (q === "fail_500" || q.toLowerCase() === "lantern" || q === "فانوس") {
+        if (q.startsWith("fail_500") || q.toLowerCase() === "lantern" || q === "فانوس") {
           jsonResponse(res, 500, { error: "Simulated search failure" });
           return;
         }

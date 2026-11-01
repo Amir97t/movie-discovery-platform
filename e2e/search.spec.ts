@@ -174,6 +174,54 @@ test.describe("Phase 4 Search Experience & API Integration", () => {
     }
   });
 
+  test("Accurate search failure and empty fallback state (fail_500) vs valid API-empty state", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // 1. Live search fails and local fixtures have no matching titles (fail_500)
+    await page.goto("/en/search?q=fail_500");
+
+    // Verify it does NOT display the ordinary API-success empty result message
+    await expect(page.locator("h2, h3, [role='status']").filter({ hasText: /^No movies found$/ })).toHaveCount(0);
+
+    // Verify it displays the new live-search-failed / no-local-samples state
+    const fallbackTitle = page.locator("h2, h3").filter({ hasText: /Live search unavailable/ });
+    await expect(fallbackTitle).toBeVisible();
+    await expect(
+      page.locator("text=The search service is currently unreachable and no matching sample titles were found in local fixtures."),
+    ).toBeVisible();
+
+    // Verify retry button exists and links to retry the query
+    const retryButton = page.locator("a:has-text('Try again')");
+    await expect(retryButton).toBeVisible();
+    await expect(retryButton).toHaveAttribute("href", "/en/search?q=fail_500&page=1");
+
+    // Confirm no result cards or fallback badges appear
+    await expect(page.locator("article")).toHaveCount(0);
+    await expect(page.locator("[data-testid='fixture-fallback-notice']")).toHaveCount(0);
+
+    // 2. Persian localization assertion for the new state
+    await page.goto("/fa/search?q=fail_500");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.locator("h2, h3").filter({ hasText: /جستجوی زنده در دسترس نیست/ })).toBeVisible();
+    await expect(
+      page.locator("text=سرویس جستجوی زنده در حال حاضر در دسترس نیست و عنوان نمونه‌ی منطبقی نیز در داده‌های محلی یافت نشد."),
+    ).toBeVisible();
+    await expect(page.locator("a:has-text('تلاش مجدد')")).toBeVisible();
+    await expect(page.locator("article")).toHaveCount(0);
+
+    // 3. Contrast with valid API-empty query (nonexistent_xyz)
+    await page.goto("/en/search?q=nonexistent_xyz");
+    await expect(page.locator("h2, h3").filter({ hasText: /^No movies found$/ })).toBeVisible();
+    await expect(page.locator("text=We couldn't find any movies matching \"nonexistent_xyz\".")).toBeVisible();
+    await expect(page.locator("h2, h3").filter({ hasText: /Live search unavailable/ })).toHaveCount(0);
+
+    // 4. Contrast with non-empty fixture fallback query (lantern)
+    await page.goto("/en/search?q=lantern");
+    await expect(page.locator("article:has-text('The Lantern Archive')")).toBeVisible();
+    await expect(page.locator("[data-testid='fixture-fallback-notice']")).toBeVisible();
+    await expect(page.locator("h2, h3").filter({ hasText: /Live search unavailable/ })).toHaveCount(0);
+  });
+
   test("Captures required visual screenshots for Phase 4 search", async ({ page }) => {
     // 1. EN desktop search results
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -199,10 +247,25 @@ test.describe("Phase 4 Search Experience & API Integration", () => {
     await page.waitForTimeout(400);
     await page.screenshot({ path: "screenshots/search-empty.png" });
 
-    // 5. Fixture fallback state
+    // 5. Fixture fallback state (with matching fixture results)
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/en/search?q=lantern");
     await page.waitForTimeout(400);
     await page.screenshot({ path: "screenshots/search-fixture-fallback.png" });
+
+    // 6. EN desktop: failed API + no matching local fixtures (Phase 4.1)
+    await page.goto("/en/search?q=fail_500");
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: "screenshots/search-en-fallback-empty.png" });
+
+    // 7. FA RTL: failed API + no matching local fixtures (Phase 4.1)
+    await page.goto("/fa/search?q=fail_500");
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: "screenshots/search-fa-fallback-empty.png" });
+
+    // 8. Existing valid API-empty state for comparison (Phase 4.1)
+    await page.goto("/en/search?q=nonexistent_xyz");
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: "screenshots/search-api-empty.png" });
   });
 });

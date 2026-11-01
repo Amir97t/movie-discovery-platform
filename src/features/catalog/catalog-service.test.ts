@@ -2034,5 +2034,15 @@ describe("Phase 2 & 2.1 - 15-movie pagination, hero candidates and metadata disc
       const urlCalled = fetchMock.mock.calls[0][0] as string;
       expect(urlCalled).toContain("page=1");
     });
+
+    it("11. returns source: 'fixture' with empty movies list when API fails and no local fixtures match the query", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockRejectedValue(new Error("HTTP 500"));
+
+      const result = await getMoviesBySearch("fail_500", 1, "en");
+      expect(result.source).toBe("fixture");
+      expect(result.movies).toHaveLength(0);
+      expect(result.metadata.total_count).toBe("0");
+    });
   });
 });
