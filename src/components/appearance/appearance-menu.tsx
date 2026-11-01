@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Languages, Monitor, Moon, Palette as PaletteIcon, Sun, type LucideIcon } from "lucide-react";
+import { Check, Languages, Monitor, Moon, Sun, SunMoon, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { Link, usePathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { MODES, PALETTES, readStoredAppearance, type ModePreference, type Palette } from "@/lib/appearance";
+import { MODES, readStoredAppearance, type ModePreference } from "@/lib/appearance";
 import {
   followSystemMode,
   getAppearanceSnapshot,
@@ -28,8 +28,10 @@ const MODE_ICONS: Record<ModePreference, LucideIcon> = {
 
 const optionClasses = (selected: boolean) =>
   cn(
-    "flex min-h-11 w-full items-center gap-2 rounded-control border px-3 text-sm font-medium transition-colors duration-200",
-    selected ? "border-accent bg-raised text-fg" : "border-line-strong text-fg hover:bg-raised",
+    "flex min-h-11 w-full items-center gap-2 rounded-control border px-3 text-sm font-medium transition-all duration-200",
+    selected
+      ? "border-accent bg-accent/15 text-fg shadow-sm font-semibold"
+      : "border-line-strong/60 text-fg hover:border-line-strong hover:bg-raised/70",
   );
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -56,19 +58,17 @@ export function AppearanceMenu() {
     getServerAppearanceSnapshot,
   );
   const appearance = parseSnapshot(snapshot);
-  const { palette, mode } = appearance;
+  const { mode } = appearance;
 
   // Keep "system" mode in sync with the OS preference while the app is open.
-  useEffect(() => followSystemMode({ palette, mode }), [palette, mode]);
+  useEffect(() => followSystemMode({ mode }), [mode]);
 
-  // Re-apply persisted appearance after client-side navigation. The
-  // server-rendered <html> resets data-palette to gold on each locale
-  // switch, so sync DOM with localStorage whenever the pathname changes.
+  // Re-apply persisted appearance after client-side navigation.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = readStoredAppearance(window.localStorage);
     const current = parseSnapshot(getAppearanceSnapshot());
-    if (stored.palette !== current.palette || stored.mode !== current.mode) {
+    if (stored.mode !== current.mode) {
       setAppearance(stored);
     }
   }, [pathname]);
@@ -102,13 +102,13 @@ export function AppearanceMenu() {
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <PaletteIcon aria-hidden="true" className="size-5" />
+        <SunMoon aria-hidden="true" className="size-5" />
       </IconButton>
 
       <div
         id={panelId}
         hidden={!open}
-        className="absolute end-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw_-_2rem)] space-y-4 rounded-card border border-line bg-surface p-4 shadow-lg"
+        className="liquid-glass absolute end-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw_-_2rem)] space-y-4 rounded-card p-4 shadow-2xl"
       >
         <Group title={t("language")}>
           {routing.locales.map((code) => (
@@ -124,30 +124,8 @@ export function AppearanceMenu() {
             >
               <Languages aria-hidden="true" className="size-4 shrink-0" />
               <span className="flex-1 text-start">{LANGUAGE_NAMES[code] ?? code}</span>
-              {code === locale ? <Check aria-hidden="true" className="size-4 shrink-0" /> : null}
+              {code === locale ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent-text" /> : null}
             </Link>
-          ))}
-        </Group>
-
-        <Group title={t("palette")}>
-          {PALETTES.map((value: Palette) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={palette === value}
-              onClick={() => setAppearance({ palette: value, mode })}
-              className={optionClasses(palette === value)}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-4 shrink-0 rounded-pill",
-                  value === "gold" ? "bg-swatch-gold" : "bg-swatch-crimson",
-                )}
-              />
-              <span className="flex-1 text-start">{t(`palettes.${value}`)}</span>
-              {palette === value ? <Check aria-hidden="true" className="size-4 shrink-0" /> : null}
-            </button>
           ))}
         </Group>
 
@@ -159,12 +137,12 @@ export function AppearanceMenu() {
                 key={value}
                 type="button"
                 aria-pressed={mode === value}
-                onClick={() => setAppearance({ palette, mode: value })}
+                onClick={() => setAppearance({ mode: value })}
                 className={optionClasses(mode === value)}
               >
                 <Icon aria-hidden="true" className="size-4 shrink-0" />
                 <span className="flex-1 text-start">{t(`modes.${value}`)}</span>
-                {mode === value ? <Check aria-hidden="true" className="size-4 shrink-0" /> : null}
+                {mode === value ? <Check aria-hidden="true" className="size-4 shrink-0 text-accent-text" /> : null}
               </button>
             );
           })}

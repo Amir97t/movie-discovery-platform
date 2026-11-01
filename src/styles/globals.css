@@ -10,8 +10,10 @@
   --color-line-strong: var(--border-strong);
   --color-fg: var(--text-primary);
   --color-muted: var(--text-muted);
+  --color-brand: var(--brand-red);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
   --color-accent-fg: var(--accent-foreground);
   --color-favorite: var(--favorite);
   --color-success: var(--success);
@@ -19,8 +21,10 @@
   --color-danger: var(--danger);
   --color-skeleton: var(--skeleton);
   --color-on-art: var(--on-art);
-  --color-swatch-gold: var(--swatch-gold);
-  --color-swatch-crimson: var(--swatch-crimson);
+
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-line: var(--glass-border);
+  --color-glass-line-top: var(--glass-border-top);
 
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -29,7 +33,7 @@
 }
 
 @theme {
-  --radius-card: 0.75rem;
+  --radius-card: 0.875rem;
   --radius-control: 0.625rem;
   --radius-pill: 999px;
 }
@@ -45,6 +49,67 @@
     font-family: var(--font-sans);
     background-color: var(--background);
     color: var(--text-primary);
+    min-height: 100vh;
+    background-image:
+      /* 1. Cinematic edge vignette */
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 50%, rgba(5, 6, 9, 0.55) 100%),
+      /* 2. Top-corner crimson ambient light spill */
+      radial-gradient(ellipse 65% 50% at 88% -6%, rgba(229, 9, 20, 0.16), transparent 65%),
+      /* 3. Cool slate/charcoal ambient depth at mid-left */
+      radial-gradient(ellipse 60% 50% at 8% 28%, rgba(65, 75, 95, 0.2), transparent 70%),
+      /* 4. Soft overhead cinema projector cone */
+      radial-gradient(circle 850px at 50% -12%, rgba(38, 44, 60, 0.4), transparent 80%),
+      /* 5. Procedural 35mm film grain texture */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.032'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  [data-mode="light"] body {
+    background-image:
+      /* 1. Warm cinematic edge vignette */
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 60%, rgba(190, 180, 170, 0.28) 100%),
+      /* 2. Subtle warm crimson ambient glow top-right */
+      radial-gradient(ellipse 60% 45% at 88% -6%, rgba(178, 7, 16, 0.055), transparent 60%),
+      /* 3. Warm stone/taupe ambient depth at mid-left */
+      radial-gradient(ellipse 55% 45% at 10% 28%, rgba(215, 200, 185, 0.45), transparent 65%),
+      /* 4. Soft center paper lift */
+      radial-gradient(circle 900px at 50% 0%, rgba(255, 253, 250, 0.6), transparent 80%),
+      /* 5. Fine archival paper/film texture */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseLight'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseLight)' opacity='0.02'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  html[dir="rtl"] body {
+    background-image:
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 50%, rgba(5, 6, 9, 0.55) 100%),
+      radial-gradient(ellipse 65% 50% at 12% -6%, rgba(229, 9, 20, 0.16), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 92% 28%, rgba(65, 75, 95, 0.2), transparent 70%),
+      radial-gradient(circle 850px at 50% -12%, rgba(38, 44, 60, 0.4), transparent 80%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseRtl'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseRtl)' opacity='0.032'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  html[dir="rtl"][data-mode="light"] body {
+    background-image:
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 60%, rgba(190, 180, 170, 0.28) 100%),
+      radial-gradient(ellipse 60% 45% at 12% -6%, rgba(178, 7, 16, 0.055), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 90% 28%, rgba(215, 200, 185, 0.45), transparent 65%),
+      radial-gradient(circle 900px at 50% 0%, rgba(255, 253, 250, 0.6), transparent 80%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseRtlLight'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseRtlLight)' opacity='0.02'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  @media (min-width: 64rem) {
+    body,
+    [data-mode="light"] body,
+    html[dir="rtl"] body,
+    html[dir="rtl"][data-mode="light"] body {
+      background-attachment: fixed;
+    }
   }
 
   /* Persian: dedicated family and a taller line height for connected script. */
@@ -72,6 +137,121 @@
 
   @media (min-width: 64rem) {
     padding-inline: 2rem;
+  }
+}
+
+/* Liquid Glass Layer Utilities */
+@utility liquid-glass {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  box-shadow: var(--glass-shadow);
+}
+
+@utility liquid-glass-pill {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-pill);
+}
+
+/* Subtle edge glow for interactive glass controls on hover/focus */
+@utility liquid-glass-interactive {
+  transition: all var(--duration-base) var(--ease-standard);
+
+  &:hover {
+    border-color: rgba(229, 9, 20, 0.3);
+    box-shadow: 0 10px 36px 0 rgb(0 0 0 / 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Custom Native Scrollbar Utilities */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: var(--radius-pill);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* Liquid Navbar Active Indicator animations */
+@keyframes liquid-stretch-right {
+  0% {
+    transform: scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: scaleX(1.10) scaleY(0.93) skewX(-2.5deg);
+  }
+  70% {
+    transform: scaleX(0.98) scaleY(1.01) skewX(0.8deg);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1) skewX(0);
+  }
+}
+
+@keyframes liquid-stretch-left {
+  0% {
+    transform: scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: scaleX(1.10) scaleY(0.93) skewX(2.5deg);
+  }
+  70% {
+    transform: scaleX(0.98) scaleY(1.01) skewX(-0.8deg);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1) skewX(0);
+  }
+}
+
+.animate-liquid-stretch-right {
+  animation: liquid-stretch-right 400ms cubic-bezier(0.25, 1.15, 0.45, 1) forwards;
+}
+
+.animate-liquid-stretch-left {
+  animation: liquid-stretch-left 400ms cubic-bezier(0.25, 1.15, 0.45, 1) forwards;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body,
+  [data-mode="light"] body,
+  html[dir="rtl"] body,
+  html[dir="rtl"][data-mode="light"] body {
+    background-image: none !important;
+  }
+
+  .liquid-glass,
+  .liquid-glass-pill {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--surface) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .liquid-glass,
+  .liquid-glass-pill {
+    border-color: var(--border-strong) !important;
   }
 }
 

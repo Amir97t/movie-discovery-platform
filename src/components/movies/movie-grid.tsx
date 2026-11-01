@@ -2,6 +2,8 @@ import { MovieCard, type MovieCardProps } from "./movie-card";
 
 export interface MovieGridItem extends MovieCardProps {
   id: string;
+  /** Localized route to the movie detail page. */
+  href: string;
 }
 
 /** 2 columns on narrow mobile, then 3 / 4 / 5 as width allows. */
@@ -11,9 +13,9 @@ export const MOVIE_GRID_CLASSES =
 export function MovieGrid({ items }: { items: MovieGridItem[] }) {
   return (
     <ul className={MOVIE_GRID_CLASSES}>
-      {items.map(({ id, ...card }) => (
+      {items.map(({ id, href, ...card }) => (
         <li key={id} className="min-w-0">
-          <MovieCard {...card} />
+          <MovieCard {...card} href={href} />
         </li>
       ))}
     </ul>

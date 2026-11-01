@@ -5,7 +5,8 @@
   },
   "a11y": {
     "skipToContent": "Skip to main content",
-    "brandHome": "FRAME — go to home"
+    "brandHome": "FRAME — go to home",
+    "searchMovies": "Search movies"
   },
   "nav": {
     "label": "Primary navigation",
@@ -18,9 +19,7 @@
   "appearance": {
     "trigger": "Appearance and language",
     "language": "Language",
-    "palette": "Palette",
     "mode": "Mode",
-    "palettes": { "gold": "Gold", "crimson": "Crimson" },
     "modes": { "light": "Light", "dark": "Dark", "system": "System" }
   },
   "home": {
@@ -28,14 +27,46 @@
     "heroKickerApi": "Featured · from the catalog",
     "heroCta": "See tonight's picks",
     "genresTitle": "Genres in the catalog",
+    "allGenres": "All",
     "picksTitle": "Tonight's picks",
     "picksNote": "Fictional sample titles used to review the design.",
-    "picksNoteApi": "Curated from the live movie catalog."
+    "picksNoteApi": "Curated from the live movie catalog.",
+    "filterGenres": "Filter by genre",
+    "filterButton": "Genres & Filters",
+    "closeFilters": "Close filters",
+    "carouselPrev": "Previous movie",
+    "carouselNext": "Next movie",
+    "carouselPlay": "Start carousel rotation",
+    "carouselPause": "Pause carousel rotation",
+    "carouselSlide": "Go to slide {number}",
+    "carouselRegion": "Featured movie carousel",
+    "carouselSlideLabel": "{current} of {total}: {title}",
+    "viewDetails": "View details",
+    "allMovies": "All Movies",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} of {total}"
   },
   "movie": {
     "minutes": "{value} min",
     "ratingValue": "Rating {value} out of 10",
-    "notRated": "Not rated"
+    "notRated": "Not rated",
+    "backToHome": "Back to home",
+    "detailPage": "Movie Details",
+    "year": "Year",
+    "runtime": "Runtime",
+    "rating": "Rating",
+    "genres": "Genres",
+    "country": "Country",
+    "director": "Director",
+    "cast": "Cast",
+    "synopsis": "Synopsis",
+    "identifiers": "Identifiers",
+    "imdbId": "IMDb ID",
+    "imdbRating": "IMDb Rating",
+    "website": "Website",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "The catalog could not be loaded. Please try again later."
   },
   "genres": {
     "action": "Action",
@@ -73,5 +104,59 @@
   },
   "footer": {
     "note": "Movie data from moviesapi.codingfront.dev. All ratings and artwork are sourced from the live catalog."
+  },
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Browse the full catalog",
+    "filterByGenre": "Filter by genre",
+    "filterButton": "Genres & Filters",
+    "closeFilters": "Close filters",
+    "allGenres": "All",
+    "noResults": "No movies found",
+    "backToHome": "Back to home",
+    "moviesTitle": "Movies",
+    "moviesNote": "{count} titles available",
+    "fixtureNotice": "Showing sample titles for this genre.",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} of {total}"
+  },
+  "library": {
+    "title": "Library",
+    "subtitle": "Your personal movie collection",
+    "comingSoonTitle": "Library is coming soon",
+    "comingSoonDescription": "We are working on bringing your personal movie library, watchlists, and favorites here.",
+    "backToHome": "Back to home",
+    "goToDiscover": "Discover movies"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Account preferences and settings",
+    "comingSoonTitle": "Profile is coming soon",
+    "comingSoonDescription": "User profiles, preferences, and personal recommendations will be available here in a future update.",
+    "backToHome": "Back to home",
+    "goToDiscover": "Discover movies"
+  },
+  "search": {
+    "title": "Search",
+    "subtitle": "Find movies across the catalog",
+    "inputLabel": "Search query",
+    "inputPlaceholder": "Search by title, director, or keyword…",
+    "submit": "Search",
+    "moviesTitle": "Search results",
+    "moviesNote": "{count} titles found",
+    "noQueryTitle": "Explore the catalog",
+    "noQueryDescription": "Enter a movie title or keyword above to find movies.",
+    "noResultsTitle": "No movies found",
+    "noResultsDescription": "We couldn't find any movies matching \"{query}\". Try checking for typos or searching for a different term.",
+    "fallbackEmptyTitle": "Live search unavailable",
+    "fallbackEmptyDescription": "The search service is currently unreachable and no matching sample titles were found in local fixtures.",
+    "fixtureNotice": "Live search unavailable. Showing matching sample titles.",
+    "errorTitle": "Search temporarily unavailable",
+    "errorDescription": "We encountered an issue while searching the catalog. Please try again.",
+    "retry": "Try again",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} of {total}"
   }
 }

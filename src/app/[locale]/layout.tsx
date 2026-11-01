@@ -29,8 +29,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f5ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#101114" },
+    { media: "(prefers-color-scheme: light)", color: "#F3EFEB" },
+    { media: "(prefers-color-scheme: dark)", color: "#111318" },
   ],
 };
 
@@ -63,13 +63,12 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       dir={getDirection(locale)}
-      data-palette="gold"
       data-mode="dark"
       className={`${geist.variable} ${vazirmatn.variable}`}
       suppressHydrationWarning
     >
       <head>
-        {/* Runs before first paint to apply the saved palette/mode. */}
+        {/* Runs before first paint to apply the saved mode. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-dvh bg-background pb-[calc(4rem_+_env(safe-area-inset-bottom))] text-fg antialiased md:pb-0">

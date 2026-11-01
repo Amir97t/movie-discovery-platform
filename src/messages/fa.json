@@ -5,7 +5,8 @@
   },
   "a11y": {
     "skipToContent": "پرش به محتوای اصلی",
-    "brandHome": "FRAME — رفتن به خانه"
+    "brandHome": "FRAME — رفتن به خانه",
+    "searchMovies": "جستجوی فیلم‌ها"
   },
   "nav": {
     "label": "ناوبری اصلی",
@@ -18,9 +19,7 @@
   "appearance": {
     "trigger": "ظاهر و زبان",
     "language": "زبان",
-    "palette": "پالت رنگی",
     "mode": "حالت",
-    "palettes": { "gold": "طلایی", "crimson": "سرخ" },
     "modes": { "light": "روشن", "dark": "تاریک", "system": "سیستم" }
   },
   "home": {
@@ -28,14 +27,46 @@
     "heroKickerApi": "ویژه · از کاتالوگ",
     "heroCta": "پیشنهادهای امشب",
     "genresTitle": "ژانرهای کاتالوگ",
+    "allGenres": "همه",
     "picksTitle": "پیشنهادهای امشب",
     "picksNote": "عنوان‌های نمونه‌ی خیالی برای بررسی طراحی.",
-    "picksNoteApi": "برگزیده از کاتالوگ زنده فیلم."
+    "picksNoteApi": "برگزیده از کاتالوگ زنده فیلم.",
+    "filterGenres": "فیلتر بر اساس ژانر",
+    "filterButton": "ژانرها و فیلترها",
+    "closeFilters": "بستن فیلترها",
+    "carouselPrev": "فیلم قبلی",
+    "carouselNext": "فیلم بعدی",
+    "carouselPlay": "شروع چرخش خودکار",
+    "carouselPause": "توقف چرخش خودکار",
+    "carouselSlide": "رفتن به اسلاید {number}",
+    "carouselRegion": "گردونه فیلم‌های برگزیده",
+    "carouselSlideLabel": "{current} از {total}: {title}",
+    "viewDetails": "مشاهده جزئیات",
+    "allMovies": "همه فیلم‌ها",
+    "previous": "قبلی",
+    "next": "بعدی",
+    "pageInfo": "صفحه {current} از {total}"
   },
-  "movie": {
+"movie": {
     "minutes": "{value} دقیقه",
     "ratingValue": "امتیاز {value} از ۱۰",
-    "notRated": "بدون امتیاز"
+    "notRated": "بدون امتیاز",
+    "backToHome": "بازگشت به خانه",
+    "detailPage": "جزئیات فیلم",
+    "year": "سال",
+    "runtime": "مدتفيذي",
+    "rating": "امتیاز",
+    "genres": "ژانرها",
+    "country": "کشور",
+    "director": "فیلم‌نامه‌نویس",
+    "cast": "بازیگران",
+    "synopsis": "خلاصه",
+    "identifiers": "شناسه‌ها",
+    "imdbId": "شناسه ایم‌دی‌بی",
+    "imdbRating": "امتیاز ایم‌دی‌بی",
+    "website": "وب‌سایت",
+    "errorTitle": "مشکلی پیش آمد",
+    "errorDescription": "بارگذاری کاتالوگ ممکن نشد. لطفاً بعداً دوباره تلاش کنید."
   },
   "genres": {
     "action": "اکشن",
@@ -73,5 +104,59 @@
   },
   "footer": {
     "note": "داده‌های فیلم از moviesapi.codingfront.dev. همه امتیازها و تصاویر از کاتالوگ زنده تأمین شده‌اند."
+  },
+  "discover": {
+    "title": "کشف",
+    "subtitle": "مرور کامل کاتالوگ",
+    "filterByGenre": "فیلتر بر اساس ژانر",
+    "filterButton": "ژانرها و فیلترها",
+    "closeFilters": "بستن فیلترها",
+    "allGenres": "همه",
+    "noResults": "فیلمی یافت نشد",
+    "backToHome": "بازگشت به خانه",
+    "moviesTitle": "فیلم‌ها",
+    "moviesNote": "{count} عنوان در دسترس",
+    "fixtureNotice": "نمایش نمونه‌های موجود برای این ژانر",
+    "previous": "قبلی",
+    "next": "بعدی",
+    "pageInfo": "صفحه {current} از {total}"
+  },
+  "library": {
+    "title": "کتابخانه",
+    "subtitle": "مجموعه فیلم‌های شخصی شما",
+    "comingSoonTitle": "کتابخانه به‌زودی در دسترس خواهد بود",
+    "comingSoonDescription": "ما در حال کار روی ایجاد کتابخانه شخصی، فهرست‌های تماشا و علاقه‌مندی‌های شما هستیم.",
+    "backToHome": "بازگشت به خانه",
+    "goToDiscover": "کشف فیلم‌ها"
+  },
+  "profile": {
+    "title": "پروفایل",
+    "subtitle": "تنظیمات و ترجیحات حساب کاربری",
+    "comingSoonTitle": "پروفایل به‌زودی در دسترس خواهد بود",
+    "comingSoonDescription": "پروفایل‌های کاربری، تنظیمات و پیشنهادهای شخصی در به‌روزرسانی‌های آینده در دسترس خواهند بود.",
+    "backToHome": "بازگشت به خانه",
+    "goToDiscover": "کشف فیلم‌ها"
+  },
+  "search": {
+    "title": "جستجو",
+    "subtitle": "جستجوی فیلم‌ها در سراسر کاتالوگ",
+    "inputLabel": "عبارت جستجو",
+    "inputPlaceholder": "جستجو بر اساس نام فیلم، کارگردان یا کلمه کلیدی…",
+    "submit": "جستجو",
+    "moviesTitle": "نتایج جستجو",
+    "moviesNote": "{count} عنوان یافت شد",
+    "noQueryTitle": "کاوش در کاتالوگ",
+    "noQueryDescription": "برای یافتن فیلم‌ها، عنوان یا کلمه کلیدی را در کادر بالا وارد کنید.",
+    "noResultsTitle": "فیلمی یافت نشد",
+    "noResultsDescription": "هیچ فیلمی مطابق با «{query}» یافت نشد. املای عبارت را بررسی کنید یا عبارت دیگری را جستجو نمایید.",
+    "fallbackEmptyTitle": "جستجوی زنده در دسترس نیست",
+    "fallbackEmptyDescription": "سرویس جستجوی زنده در حال حاضر در دسترس نیست و عنوان نمونه‌ی منطبقی نیز در داده‌های محلی یافت نشد.",
+    "fixtureNotice": "جستجوی زنده در دسترس نیست. نمایش نمونه‌های منطبق.",
+    "errorTitle": "جستجو موقتاً در دسترس نیست",
+    "errorDescription": "هنگام جستجو در کاتالوگ با خطا مواجه شدیم. لطفاً دوباره تلاش کنید.",
+    "retry": "تلاش مجدد",
+    "previous": "قبلی",
+    "next": "بعدی",
+    "pageInfo": "صفحه {current} از {total}"
   }
 }
