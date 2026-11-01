@@ -1,4 +1,4 @@
-import { SearchX, TriangleAlert } from "lucide-react";
+import { Film, SearchX, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
@@ -137,9 +137,16 @@ export default async function DiscoverPage({
 
   return (
     <div className="page-container space-y-8 pb-16 pt-4 sm:pt-6">
-      <section className="space-y-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">{t("title")}</h1>
-        <p className="text-base text-muted max-w-2xl">{t("subtitle")}</p>
+      <section className="relative overflow-hidden rounded-3xl border border-line/50 bg-gradient-to-br from-surface/85 via-surface/60 to-surface-raised/40 p-6 sm:p-8 backdrop-blur-xl shadow-lg shadow-black/10">
+        <div className="absolute -top-12 -end-12 size-48 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+        <div className="relative space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-xs font-semibold tracking-wider text-accent-text">
+            <Film className="size-3.5" aria-hidden="true" />
+            <span>{t("moviesTitle")}</span>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">{t("title")}</h1>
+          <p className="text-base text-muted max-w-2xl">{t("subtitle")}</p>
+        </div>
       </section>
 
       {/* Catalog Layout with Desktop Sidebar and Grid */}

@@ -51,17 +51,65 @@
     color: var(--text-primary);
     min-height: 100vh;
     background-image:
-      radial-gradient(ellipse 65% 50% at 85% -10%, rgba(229, 9, 20, 0.07), transparent 60%),
-      radial-gradient(ellipse 60% 45% at 10% 25%, rgba(68, 64, 90, 0.08), transparent 65%),
-      radial-gradient(circle 800px at 50% 0%, rgba(25, 26, 33, 0.5), transparent 100%);
-    background-repeat: no-repeat;
+      /* 1. Cinematic edge vignette */
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 50%, rgba(5, 6, 9, 0.55) 100%),
+      /* 2. Top-corner crimson ambient light spill */
+      radial-gradient(ellipse 65% 50% at 88% -6%, rgba(229, 9, 20, 0.16), transparent 65%),
+      /* 3. Cool slate/charcoal ambient depth at mid-left */
+      radial-gradient(ellipse 60% 50% at 8% 28%, rgba(65, 75, 95, 0.2), transparent 70%),
+      /* 4. Soft overhead cinema projector cone */
+      radial-gradient(circle 850px at 50% -12%, rgba(38, 44, 60, 0.4), transparent 80%),
+      /* 5. Procedural 35mm film grain texture */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.032'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
   }
 
   [data-mode="light"] body {
     background-image:
-      radial-gradient(ellipse 60% 45% at 85% -8%, rgba(178, 7, 16, 0.035), transparent 60%),
-      radial-gradient(ellipse 55% 40% at 15% 30%, rgba(220, 200, 185, 0.35), transparent 65%),
-      radial-gradient(circle 900px at 50% 0%, rgba(254, 252, 250, 0.5), transparent 100%);
+      /* 1. Warm cinematic edge vignette */
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 60%, rgba(190, 180, 170, 0.28) 100%),
+      /* 2. Subtle warm crimson ambient glow top-right */
+      radial-gradient(ellipse 60% 45% at 88% -6%, rgba(178, 7, 16, 0.055), transparent 60%),
+      /* 3. Warm stone/taupe ambient depth at mid-left */
+      radial-gradient(ellipse 55% 45% at 10% 28%, rgba(215, 200, 185, 0.45), transparent 65%),
+      /* 4. Soft center paper lift */
+      radial-gradient(circle 900px at 50% 0%, rgba(255, 253, 250, 0.6), transparent 80%),
+      /* 5. Fine archival paper/film texture */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseLight'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseLight)' opacity='0.02'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  html[dir="rtl"] body {
+    background-image:
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 50%, rgba(5, 6, 9, 0.55) 100%),
+      radial-gradient(ellipse 65% 50% at 12% -6%, rgba(229, 9, 20, 0.16), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 92% 28%, rgba(65, 75, 95, 0.2), transparent 70%),
+      radial-gradient(circle 850px at 50% -12%, rgba(38, 44, 60, 0.4), transparent 80%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseRtl'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseRtl)' opacity='0.032'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  html[dir="rtl"][data-mode="light"] body {
+    background-image:
+      radial-gradient(ellipse 95% 85% at 50% 50%, transparent 60%, rgba(190, 180, 170, 0.28) 100%),
+      radial-gradient(ellipse 60% 45% at 12% -6%, rgba(178, 7, 16, 0.055), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 90% 28%, rgba(215, 200, 185, 0.45), transparent 65%),
+      radial-gradient(circle 900px at 50% 0%, rgba(255, 253, 250, 0.6), transparent 80%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseRtlLight'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseRtlLight)' opacity='0.02'/%3E%3C/svg%3E");
+    background-attachment: scroll;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+
+  @media (min-width: 64rem) {
+    body,
+    [data-mode="light"] body,
+    html[dir="rtl"] body,
+    html[dir="rtl"][data-mode="light"] body {
+      background-attachment: fixed;
+    }
   }
 
   /* Persian: dedicated family and a taller line height for connected script. */
@@ -185,6 +233,13 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  body,
+  [data-mode="light"] body,
+  html[dir="rtl"] body,
+  html[dir="rtl"][data-mode="light"] body {
+    background-image: none !important;
+  }
+
   .liquid-glass,
   .liquid-glass-pill {
     backdrop-filter: none !important;

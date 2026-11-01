@@ -621,4 +621,299 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       });
     }
   });
+
+  test("Captures Phase 4.2 visual screenshots and measures layout widths", async ({ browser }) => {
+    test.setTimeout(120000);
+
+    // 1. Generate deterministic visual artwork buffers for screenshot capture
+    const artPage = await browser.newPage({ viewport: { width: 400, height: 600 } });
+    await artPage.setContent(`
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          width: 400px;
+          height: 600px;
+          background: linear-gradient(145deg, #1f222e 0%, #0d0f15 50%, #2e080b 100%);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 32px 24px;
+          font-family: system-ui, -apple-system, sans-serif;
+          color: #f1f3f7;
+          position: relative;
+          overflow: hidden;
+        }
+        .glow {
+          position: absolute;
+          top: -40px;
+          right: -40px;
+          width: 200px;
+          height: 200px;
+          background: radial-gradient(circle, rgba(229,9,20,0.4) 0%, transparent 70%);
+        }
+        .badge {
+          align-self: flex-start;
+          background: rgba(229,9,20,0.2);
+          border: 1px solid rgba(229,9,20,0.4);
+          color: #ff626b;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 999px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 12px;
+        }
+        .icon-box {
+          width: 64px;
+          height: 64px;
+          border-radius: 16px;
+          background: rgba(229,9,20,0.15);
+          border: 1px solid rgba(229,9,20,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .title {
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+        }
+        .subtitle {
+          font-size: 12px;
+          color: #9da3b4;
+        }
+        .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 11px;
+          color: #656d82;
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding-top: 12px;
+        }
+      </style>
+      <div class="glow"></div>
+      <div class="badge">Cinema Red</div>
+      <div class="center">
+        <div class="icon-box">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 8 7 4-7 4Z"/>
+          </svg>
+        </div>
+        <div class="title">CINEMA PREMIERE</div>
+        <div class="subtitle">Feature Film Selection</div>
+      </div>
+      <div class="footer">
+        <span>★ 8.5 RATING</span>
+        <span>2024 · 124 MIN</span>
+      </div>
+    `);
+    const posterBuffer = await artPage.screenshot({ type: "png" });
+
+    const bdPage = await browser.newPage({ viewport: { width: 1440, height: 720 } });
+    await bdPage.setContent(`
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          width: 1440px;
+          height: 720px;
+          background: radial-gradient(circle at 75% 25%, rgba(229,9,20,0.45) 0%, rgba(25,26,33,0.95) 55%, #0d0e12 100%),
+                      linear-gradient(180deg, rgba(17,19,24,0.1) 0%, rgba(17,19,24,0.95) 100%);
+          display: flex;
+          align-items: flex-end;
+          padding: 64px 80px;
+          font-family: system-ui, -apple-system, sans-serif;
+          color: #f1f3f7;
+          position: relative;
+          overflow: hidden;
+        }
+        .lens-flare {
+          position: absolute;
+          top: 15%;
+          right: 20%;
+          width: 700px;
+          height: 400px;
+          background: radial-gradient(ellipse, rgba(229,9,20,0.3) 0%, rgba(245,165,36,0.12) 40%, transparent 70%);
+          transform: rotate(-15deg);
+        }
+        .brand {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .tag {
+          color: #ff626b;
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+        .title {
+          font-size: 52px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          text-shadow: 0 4px 24px rgba(0,0,0,0.85);
+        }
+      </style>
+      <div class="lens-flare"></div>
+      <div class="brand">
+        <div class="tag">Now Featuring</div>
+        <div class="title">Cinema Red Premiere Showcase</div>
+      </div>
+    `);
+    const backdropBuffer = await bdPage.screenshot({ type: "png" });
+    await artPage.close();
+    await bdPage.close();
+
+    // 2. Mock image responses using real remote fetch or deterministic rich test artwork
+    const mockVisualArtwork = async (p: Page) => {
+      await p.route("**/_next/image*", async (route) => {
+        const reqUrl = route.request().url();
+        const isBackdrop = reqUrl.includes("backdrop") || reqUrl.includes("header") || reqUrl.includes("hero");
+
+        try {
+          const parsed = new URL(reqUrl);
+          const upstream = parsed.searchParams.get("url");
+          if (upstream && upstream.startsWith("http")) {
+            const res = await fetch(upstream, { signal: AbortSignal.timeout(1500) });
+            if (res.ok) {
+              const ab = await res.arrayBuffer();
+              await route.fulfill({
+                status: 200,
+                contentType: res.headers.get("content-type") || "image/jpeg",
+                body: Buffer.from(ab),
+              });
+              return;
+            }
+          }
+        } catch {
+          // upstream unavailable or timed out, fall back to deterministic visual test artwork
+        }
+
+        await route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: isBackdrop ? backdropBuffer : posterBuffer,
+        });
+      });
+    };
+
+    // 1. Home — English, desktop, Dark (1440x900)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/en");
+      await page.waitForLoadState("domcontentloaded");
+      await expect(page.locator("html")).toHaveAttribute("data-mode", "dark");
+
+      // Verify visible hero backdrop image with real dimensions
+      const heroImg = page.locator("main img, [role='region'] img").first();
+      await expect(heroImg).toBeVisible();
+      await page.waitForFunction(() => {
+        const img = document.querySelector("main img, [role='region'] img") as HTMLImageElement | null;
+        return Boolean(img && img.complete && img.naturalWidth > 50 && img.naturalHeight > 50);
+      }, { timeout: 10000 });
+
+      await page.screenshot({ path: "screenshots/home-en-dark-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // 2. Discover — English, desktop, Dark (1440x900)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/en/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      await expect(page.locator("html")).toHaveAttribute("data-mode", "dark");
+
+      // Verify visible poster artwork with real dimensions across movie cards
+      const posterImgs = page.locator("article img");
+      await expect(posterImgs.first()).toBeVisible();
+      await page.waitForFunction(() => {
+        const imgs = document.querySelectorAll("article img");
+        return (
+          imgs.length > 0 &&
+          Array.from(imgs).every((img) => {
+            const htmlImg = img as HTMLImageElement;
+            return htmlImg.complete && htmlImg.naturalWidth > 50 && htmlImg.naturalHeight > 50;
+          })
+        );
+      }, { timeout: 10000 });
+
+      await page.screenshot({ path: "screenshots/discover-en-dark-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // Layout width measurements using getBoundingClientRect()
+    const layoutContext = await browser.newContext();
+    const measurePage = await layoutContext.newPage();
+    await mockImageResponses(measurePage);
+
+    const viewports = [
+      { width: 1440, height: 900 },
+      { width: 1280, height: 800 },
+      { width: 1024, height: 768 },
+    ];
+
+    console.log("=== ACTUAL LAYOUT MEASUREMENTS (getBoundingClientRect) ===");
+    for (const vp of viewports) {
+      await measurePage.setViewportSize({ width: vp.width, height: vp.height });
+      await measurePage.goto("/en/discover?page=1");
+      await measurePage.waitForLoadState("domcontentloaded");
+
+      const measurements = await measurePage.evaluate(() => {
+        const container = document.querySelector(".page-container");
+        const sidebar = document.querySelector("section[aria-labelledby='discover-genres-title']");
+        const grid = document.querySelector("section[aria-labelledby='discover-picks-title'] ul");
+        const flexParent = sidebar?.parentElement;
+
+        const cRect = container?.getBoundingClientRect();
+        const sRect = sidebar?.getBoundingClientRect();
+        const gRect = grid?.getBoundingClientRect();
+
+        let gap = 0;
+        if (sRect && gRect) {
+          gap = Math.round(gRect.left - sRect.right);
+        } else if (flexParent) {
+          const comp = window.getComputedStyle(flexParent);
+          gap = parseFloat(comp.gap || comp.columnGap || "0");
+        }
+
+        return {
+          containerWidth: cRect ? Math.round(cRect.width) : 0,
+          sidebarWidth: sRect ? Math.round(sRect.width) : 0,
+          gap,
+          gridWidth: gRect ? Math.round(gRect.width) : 0,
+        };
+      });
+
+      console.log(
+        `Viewport ${vp.width}x${vp.height} -> page-container: ${measurements.containerWidth}px, sidebar: ${measurements.sidebarWidth}px, gap: ${measurements.gap}px, movie-grid: ${measurements.gridWidth}px`,
+      );
+    }
+    await layoutContext.close();
+  });
 });
