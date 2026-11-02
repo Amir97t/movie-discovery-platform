@@ -46,7 +46,7 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
   const tm = useTranslations("movie");
   const tg = useTranslations("genres");
 
-  // Initial candidate order is randomized on the server per request using Fisher-Yates,
+  // Candidates are ordered deterministically in descending rating order from getHeroCandidates(),
   // ensuring the initial slide matches between server-render and client hydration without mismatches.
   const slides = candidates.slice(0, 6);
   const [currentIndex, setCurrentIndex] = useState(0);

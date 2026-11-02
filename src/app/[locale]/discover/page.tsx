@@ -149,78 +149,79 @@ export default async function DiscoverPage({
         </div>
       </section>
 
-      {/* Catalog Layout with Desktop Sidebar and Grid */}
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-        <GenreSidebar
-          ariaLabelledBy="discover-genres-title"
-          genresTitle={t("filterByGenre")}
-          allLabel={t("allGenres")}
-          allHref={buildGenreUrl(undefined)}
-          filterButtonLabel={t("filterButton")}
-          closeFiltersLabel={t("closeFilters")}
-          selectedGenreKey={selectedGenreKey}
-          genreItems={genreItems}
-        />
+      {/* Catalog Section with Filter Drawer Trigger and Grid */}
+      <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 id="discover-picks-title" className="text-2xl font-bold tracking-tight text-fg">
+                {t("moviesTitle")}
+              </h2>
+              {result?.source === "fixture" && (
+                <span
+                  data-testid="fixture-fallback-notice"
+                  className="inline-flex items-center text-xs font-medium text-accent-text bg-accent/10 border border-accent/20 rounded-full px-2.5 py-0.5 tracking-wide"
+                >
+                  {t("fixtureNotice")}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
+          </div>
 
-        <div className="flex-1 min-w-0 w-full space-y-8">
-          {fetchError ? (
-            <EmptyState
-              icon={<TriangleAlert className="size-10" />}
-              title={te("errorTitle")}
-              description={te("errorDescription")}
-              action={
-                <Link href="/discover?page=1" className={buttonStyles({ size: "md" })}>
-                  ← {t("backToHome")}
-                </Link>
-              }
+          <div className="shrink-0">
+            <GenreSidebar
+              ariaLabelledBy="discover-genres-title"
+              genresTitle={t("filterByGenre")}
+              allLabel={t("allGenres")}
+              allHref={buildGenreUrl(undefined)}
+              filterButtonLabel={t("filterButton")}
+              closeFiltersLabel={t("closeFilters")}
+              selectedGenreKey={selectedGenreKey}
+              genreItems={genreItems}
             />
-          ) : isGenreUnavailable || items.length === 0 ? (
-            <EmptyState
-              icon={<SearchX className="size-10" />}
-              title={te("emptyTitle")}
-              description={t("noResults")}
-              action={
-                <Link href="/discover?page=1" className={buttonStyles({ size: "md", variant: "secondary" })}>
-                  ← {t("allGenres")}
-                </Link>
-              }
-            />
-          ) : (
-            <section aria-labelledby="discover-picks-title" className="scroll-mt-20 space-y-6">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h2 id="discover-picks-title" className="text-2xl font-bold tracking-tight text-fg">
-                    {t("moviesTitle")}
-                  </h2>
-                  {result?.source === "fixture" && (
-                    <span
-                      data-testid="fixture-fallback-notice"
-                      className="inline-flex items-center text-xs font-medium text-accent-text bg-accent/10 border border-accent/20 rounded-full px-2.5 py-0.5 tracking-wide"
-                    >
-                      {t("fixtureNotice")}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted">{t("moviesNote", { count: totalCount })}</p>
-              </div>
-
-              <MovieGrid items={items} />
-
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                buildPageUrl={buildPageUrl}
-                previousLabel={t("previous")}
-                nextLabel={t("next")}
-                pageInfoLabel={t("pageInfo", {
-                  current: plainNumber.format(page),
-                  total: plainNumber.format(totalPages),
-                })}
-              />
-            </section>
-          )}
+          </div>
         </div>
-      </div>
+
+        {fetchError ? (
+          <EmptyState
+            icon={<TriangleAlert className="size-10" />}
+            title={te("errorTitle")}
+            description={te("errorDescription")}
+            action={
+              <Link href="/discover?page=1" className={buttonStyles({ size: "md" })}>
+                ← {t("backToHome")}
+              </Link>
+            }
+          />
+        ) : isGenreUnavailable || items.length === 0 ? (
+          <EmptyState
+            icon={<SearchX className="size-10" />}
+            title={te("emptyTitle")}
+            description={t("noResults")}
+            action={
+              <Link href="/discover?page=1" className={buttonStyles({ size: "md", variant: "secondary" })}>
+                ← {t("allGenres")}
+              </Link>
+            }
+          />
+        ) : (
+          <div className="space-y-8">
+            <MovieGrid items={items} />
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              buildPageUrl={buildPageUrl}
+              previousLabel={t("previous")}
+              nextLabel={t("next")}
+              pageInfoLabel={t("pageInfo", {
+                current: plainNumber.format(page),
+                total: plainNumber.format(totalPages),
+              })}
+            />
+          </div>
+        )}
+      </section>
     </div>
   );
 }

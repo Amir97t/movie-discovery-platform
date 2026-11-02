@@ -232,6 +232,33 @@
   animation: liquid-stretch-left 400ms cubic-bezier(0.25, 1.15, 0.45, 1) forwards;
 }
 
+/* Genre Filter Edge Drawer Animations */
+@keyframes drawer-slide-in-ltr {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-slide-in-rtl {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-slide-in {
+  animation: drawer-slide-in-ltr 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+html[dir="rtl"] .drawer-slide-in {
+  animation: drawer-slide-in-rtl 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   body,
   [data-mode="light"] body,

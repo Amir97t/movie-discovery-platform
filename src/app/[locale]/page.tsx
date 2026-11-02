@@ -14,7 +14,6 @@ import {
   getMoviesByGenre,
   getMoviesByPage,
   MovieNotFoundError,
-  shuffleCandidates,
 } from "@/features/catalog/catalog-service";
 import { GENRE_KEYS, type GenreKey, type Movie } from "@/features/catalog/catalog-types";
 import { resolveLocale } from "@/i18n/routing";
@@ -48,15 +47,14 @@ export default async function HomePage({
   const tg = await getTranslations({ locale, namespace: "genres" });
   const te = await getTranslations({ locale, namespace: "states" });
 
-  // 1. Fetch stable Hero candidates and randomize order per server request
+  // 1. Fetch deterministic Hero candidates in descending rating order
   const homeCatalog = await getHomeCatalog(locale);
-  const rawCandidates =
+  const heroCandidates =
     homeCatalog.status === "success"
       ? homeCatalog.data.heroCandidates && homeCatalog.data.heroCandidates.length > 0
         ? homeCatalog.data.heroCandidates
         : [homeCatalog.data.featured]
       : [];
-  const heroCandidates = shuffleCandidates(rawCandidates);
 
   // 2. Fetch paginated catalog grid (15 items per page)
   let result:
@@ -163,69 +161,68 @@ export default async function HomePage({
 
       {/* Main Catalog Section */}
       <section id="picks" aria-labelledby="catalog-title" className="scroll-mt-24 space-y-6">
-        <div className="space-y-1">
-          <h2 id="catalog-title" className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
-            {t("picksTitle")}
-          </h2>
-          <p className="text-sm text-muted">
-            {t(source === "api" ? "picksNoteApi" : "picksNote")}
-          </p>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h2 id="catalog-title" className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
+              {t("picksTitle")}
+            </h2>
+            <p className="text-sm text-muted">
+              {t(source === "api" ? "picksNoteApi" : "picksNote")}
+            </p>
+          </div>
 
-        {/* Catalog Layout with Desktop Sidebar and Grid */}
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-          <GenreSidebar
-            ariaLabelledBy="catalog-genres-title"
-            genresTitle={t("genresTitle")}
-            allLabel={t("allGenres")}
-            allHref={buildGenreUrl(undefined)}
-            filterButtonLabel={t("filterButton")}
-            closeFiltersLabel={t("closeFilters")}
-            selectedGenreKey={selectedGenreKey}
-            genreItems={genreItems}
-          />
-
-          <div className="flex-1 min-w-0 w-full space-y-8">
-            {fetchError ? (
-              <EmptyState
-                icon={<TriangleAlert className="size-10" />}
-                title={te("errorTitle")}
-                description={te("errorDescription")}
-                action={
-                  <Link href="/" className={buttonStyles({ size: "md" })}>
-                    ← {t("allGenres")}
-                  </Link>
-                }
-              />
-            ) : isGenreUnavailable || items.length === 0 ? (
-              <EmptyState
-                icon={<SearchX className="size-10" />}
-                title={te("emptyTitle")}
-                description={t("noResults")}
-                action={
-                  <Link href="/" className={buttonStyles({ size: "md", variant: "secondary" })}>
-                    ← {t("allGenres")}
-                  </Link>
-                }
-              />
-            ) : (
-              <>
-                <MovieGrid items={items} />
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  buildPageUrl={buildPageUrl}
-                  previousLabel={t("previous")}
-                  nextLabel={t("next")}
-                  pageInfoLabel={t("pageInfo", {
-                    current: plainNumber.format(page),
-                    total: plainNumber.format(totalPages),
-                  })}
-                />
-              </>
-            )}
+          <div className="shrink-0">
+            <GenreSidebar
+              ariaLabelledBy="catalog-genres-title"
+              genresTitle={t("genresTitle")}
+              allLabel={t("allGenres")}
+              allHref={buildGenreUrl(undefined)}
+              filterButtonLabel={t("filterButton")}
+              closeFiltersLabel={t("closeFilters")}
+              selectedGenreKey={selectedGenreKey}
+              genreItems={genreItems}
+            />
           </div>
         </div>
+
+        {fetchError ? (
+          <EmptyState
+            icon={<TriangleAlert className="size-10" />}
+            title={te("errorTitle")}
+            description={te("errorDescription")}
+            action={
+              <Link href="/" className={buttonStyles({ size: "md" })}>
+                ← {t("allGenres")}
+              </Link>
+            }
+          />
+        ) : isGenreUnavailable || items.length === 0 ? (
+          <EmptyState
+            icon={<SearchX className="size-10" />}
+            title={te("emptyTitle")}
+            description={t("noResults")}
+            action={
+              <Link href="/" className={buttonStyles({ size: "md", variant: "secondary" })}>
+                ← {t("allGenres")}
+              </Link>
+            }
+          />
+        ) : (
+          <div className="space-y-8">
+            <MovieGrid items={items} />
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              buildPageUrl={buildPageUrl}
+              previousLabel={t("previous")}
+              nextLabel={t("next")}
+              pageInfoLabel={t("pageInfo", {
+                current: plainNumber.format(page),
+                total: plainNumber.format(totalPages),
+              })}
+            />
+          </div>
+        )}
       </section>
     </div>
   );

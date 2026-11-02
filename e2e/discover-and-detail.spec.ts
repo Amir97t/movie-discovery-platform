@@ -160,24 +160,44 @@ test.describe("Internal localized navigation", () => {
 
   test("clicking Home genre filters catalog on Home with genre query and page 1", async ({ page }) => {
     await page.goto("/en");
-    const scifiChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('Sci-Fi')").first();
+    const filterBtn = page.getByTestId("genre-filter-trigger");
+    await expect(filterBtn).toBeVisible();
+    await filterBtn.click();
+
+    const drawer = page.locator("#genre-drawer");
+    await expect(drawer).toBeVisible();
+
+    const scifiChip = drawer.locator("a:has-text('Sci-Fi')").first();
     await scifiChip.click();
     await expect(page).toHaveURL(/\/en\?genre=scifi&page=1/, { timeout: 10000 });
     await expect(page.locator("#picks")).toBeVisible();
+    await expect(filterBtn).toContainText("Sci-Fi");
 
-    const allChip = page.locator("section[aria-labelledby='catalog-genres-title'] a:has-text('All')").first();
+    await filterBtn.click();
+    await expect(drawer).toBeVisible();
+    const allChip = drawer.locator("a:has-text('All')").first();
     await allChip.click();
     await expect(page).toHaveURL(/\/en\/?$/, { timeout: 10000 });
   });
 
   test("clicking Discover genre filters catalog on Discover with genre query and page 1", async ({ page }) => {
     await page.goto("/en/discover?page=1");
-    const scifiChip = page.locator("section[aria-labelledby='discover-genres-title'] a:has-text('Sci-Fi')").first();
+    const filterBtn = page.getByTestId("genre-filter-trigger");
+    await expect(filterBtn).toBeVisible();
+    await filterBtn.click();
+
+    const drawer = page.locator("#genre-drawer");
+    await expect(drawer).toBeVisible();
+
+    const scifiChip = drawer.locator("a:has-text('Sci-Fi')").first();
     await scifiChip.click();
     await expect(page).toHaveURL(/\/en\/discover\?genre=scifi&page=1/);
     await expect(page.locator("h1")).toHaveText("Discover");
+    await expect(filterBtn).toContainText("Sci-Fi");
 
-    const allChip = page.locator("section[aria-labelledby='discover-genres-title'] a:has-text('All')").first();
+    await filterBtn.click();
+    await expect(drawer).toBeVisible();
+    const allChip = drawer.locator("a:has-text('All')").first();
     await allChip.click();
     await expect(page).toHaveURL(/\/en\/discover\?page=1/);
   });
@@ -211,14 +231,26 @@ test.describe("Genre filtering, chips stability and pagination", () => {
 
   test("all genre chips remain stable and visible after filtering and pagination", async ({ page }) => {
     await page.goto("/en/discover?genre=scifi&page=1");
-    const genreLinks = page.locator("section[aria-labelledby='discover-genres-title'] ul li a");
-    await expect(genreLinks).toHaveCount(21); // "All" + 20 canonical genres
+    const filterBtn = page.getByTestId("genre-filter-trigger");
+    await filterBtn.click();
+    const drawer = page.locator("#genre-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator("ul li a")).toHaveCount(21); // "All" + 20 canonical genres
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
 
     await page.goto("/en/discover?genre=scifi&page=2");
-    await expect(genreLinks).toHaveCount(21);
+    await filterBtn.click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator("ul li a")).toHaveCount(21);
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
 
     await page.goto("/en/discover?page=1");
-    await expect(genreLinks).toHaveCount(21);
+    await filterBtn.click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator("ul li a")).toHaveCount(21);
+    await page.keyboard.press("Escape");
   });
 
   test("unfiltered pagination works cleanly without /discover&page syntax", async ({ page }) => {
@@ -240,8 +272,12 @@ test.describe("Genre filtering, chips stability and pagination", () => {
     await page.goto("/en/discover?genre=unsupported-genre&page=1");
     await expect(page.locator("text=This page is not on the reel")).not.toBeVisible();
     await expect(page.locator("text=Nothing to show yet")).toBeVisible();
-    const genreLinks = page.locator("section[aria-labelledby='discover-genres-title'] ul li a");
-    await expect(genreLinks).toHaveCount(21);
+    const filterBtn = page.getByTestId("genre-filter-trigger");
+    await filterBtn.click();
+    const drawer = page.locator("#genre-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator("ul li a")).toHaveCount(21);
+    await page.keyboard.press("Escape");
   });
 });
 
@@ -441,72 +477,113 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await expect(page.locator("h1")).toBeVisible();
   });
 
-  test("Mobile filter drawer focus trap: initial focus, Tab cycling, Shift+Tab, and Escape", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("Filter drawer focus trap: initial focus, Tab cycling, Shift+Tab, and Escape on desktop and mobile", async ({ page }) => {
+    for (const [w, h] of [
+      [1440, 900],
+      [390, 844],
+    ]) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/en");
+
+      const filterButton = page.getByTestId("genre-filter-trigger");
+      await expect(filterButton).toBeVisible();
+      await filterButton.click();
+
+      const drawer = page.locator("#genre-drawer");
+      await expect(drawer).toBeVisible();
+
+      // 1. Initial focus: close button must be focused
+      const closeBtn = drawer.locator("button[aria-label*='Close']");
+      await expect(closeBtn).toBeFocused();
+
+      // 2. Tab from final focusable item cycles to first
+      const drawerLinks = drawer.locator("a");
+      const lastLink = drawerLinks.last();
+      await lastLink.focus();
+      await expect(lastLink).toBeFocused();
+
+      await page.keyboard.press("Tab");
+      await expect(closeBtn).toBeFocused();
+
+      // 3. Shift+Tab from first item cycles to final item
+      await page.keyboard.press("Shift+Tab");
+      await expect(lastLink).toBeFocused();
+
+      // 4. Escape closes drawer and restores focus to trigger button
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+      await expect(filterButton).toBeFocused();
+    }
+  });
+
+  test("Filter drawer closes and restores focus when clicking backdrop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en");
 
-    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
-    await expect(filterButton).toBeVisible();
+    const filterButton = page.getByTestId("genre-filter-trigger");
     await filterButton.click();
 
-    const drawer = page.locator("#mobile-genre-drawer");
+    const drawer = page.locator("#genre-drawer");
     await expect(drawer).toBeVisible();
 
-    // 1. Initial focus: close button must be focused
-    const closeBtn = drawer.locator("button[aria-label*='Close']");
-    await expect(closeBtn).toBeFocused();
-
-    // 2. Tab from final focusable item cycles to first
-    const drawerLinks = drawer.locator("a");
-    const lastLink = drawerLinks.last();
-    await lastLink.focus();
-    await expect(lastLink).toBeFocused();
-
-    await page.keyboard.press("Tab");
-    await expect(closeBtn).toBeFocused();
-
-    // 3. Shift+Tab from first item cycles to final item
-    await page.keyboard.press("Shift+Tab");
-    await expect(lastLink).toBeFocused();
-
-    // 4. Escape closes drawer and restores focus to trigger button
-    await page.keyboard.press("Escape");
+    // Click outside drawer on backdrop overlay
+    const backdrop = page.getByTestId("genre-drawer-backdrop");
+    await backdrop.click({ position: { x: 500, y: 200 } });
     await expect(drawer).not.toBeVisible();
     await expect(filterButton).toBeFocused();
   });
 
-  test("Mobile filter drawer closes and restores focus when clicking backdrop", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("Filter drawer genre selection navigates and closes drawer in LTR and RTL", async ({ page }) => {
+    // English LTR on Home
     await page.goto("/en");
-
-    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
-    await filterButton.click();
-
-    const drawer = page.locator("#mobile-genre-drawer");
-    await expect(drawer).toBeVisible();
-
-    // Click outside drawer on backdrop overlay (e.g. at x: 350, y: 100)
-    await page.mouse.click(350, 100);
-    await expect(drawer).not.toBeVisible();
-    await expect(filterButton).toBeFocused();
-  });
-
-  test("Mobile filter drawer genre selection navigates and closes drawer", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/en");
-
-    const filterButton = page.locator("button:has-text('Genres & Filters')").first();
-    await filterButton.click();
-
-    const drawer = page.locator("#mobile-genre-drawer");
-    await expect(drawer).toBeVisible();
-
-    // Click Sci-Fi link
-    const scifiLink = drawer.locator("a:has-text('Sci-Fi')").first();
-    await scifiLink.click();
-
-    await expect(drawer).not.toBeVisible();
+    const filterBtnEn = page.getByTestId("genre-filter-trigger");
+    await filterBtnEn.click();
+    const drawerEn = page.locator("#genre-drawer");
+    await expect(drawerEn).toBeVisible();
+    await drawerEn.locator("a:has-text('Sci-Fi')").first().click();
+    await expect(drawerEn).not.toBeVisible();
     await expect(page).toHaveURL(/genre=scifi/);
+
+    // Persian RTL on Discover
+    await page.goto("/fa/discover?page=1");
+    const filterBtnFa = page.getByTestId("genre-filter-trigger");
+    await filterBtnFa.click();
+    const drawerFa = page.locator("#genre-drawer");
+    await expect(drawerFa).toBeVisible();
+    await drawerFa.locator("a[href*='genre=scifi']").first().click();
+    await expect(drawerFa).not.toBeVisible();
+    await expect(page).toHaveURL(/\/fa\/discover\?genre=scifi/);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  });
+
+  test("Home featured content is predictable and deterministic across repeated visits", async ({ page }) => {
+    await page.goto("/en");
+    const hero = page.locator("section[aria-roledescription='carousel']");
+    await expect(hero).toBeVisible();
+
+    const initialTitle = (await hero.locator("h2 a").innerText()).trim();
+    const initialHref = await hero.locator("a:has-text('View details')").getAttribute("href");
+
+    // Repeated visits must consistently render the exact same featured movie
+    for (let i = 0; i < 3; i++) {
+      await page.goto("/en");
+      await expect(hero).toBeVisible();
+      const currentTitle = (await hero.locator("h2 a").innerText()).trim();
+      const currentHref = await hero.locator("a:has-text('View details')").getAttribute("href");
+      expect(currentTitle).toBe(initialTitle);
+      expect(currentHref).toBe(initialHref);
+    }
+
+    // Carousel navigation controls follow the fixed candidate order
+    const nextButton = hero.locator("button[aria-label*='Next']");
+    await nextButton.click();
+    const nextTitle = (await hero.locator("h2 a").innerText()).trim();
+    expect(nextTitle).not.toBe(initialTitle);
+
+    const prevButton = hero.locator("button[aria-label*='Previous']");
+    await prevButton.click();
+    const backTitle = (await hero.locator("h2 a").innerText()).trim();
+    expect(backTitle).toBe(initialTitle);
   });
 });
 
@@ -864,6 +941,106 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       }, { timeout: 10000 });
 
       await page.screenshot({ path: "screenshots/discover-en-dark-1440.png", fullPage: false });
+
+      // 3. Discover — Desktop with edge drawer open (1440x900)
+      const filterBtn = page.getByTestId("genre-filter-trigger");
+      await filterBtn.click();
+      const drawer = page.locator("#genre-drawer");
+      await expect(drawer).toBeVisible();
+      await page.screenshot({ path: "screenshots/discover-desktop-en-drawer.png", fullPage: false });
+      await context.close();
+    }
+
+    // 4. Discover — English, desktop, Light (1440x900)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "light" }));
+        document.documentElement.dataset.mode = "light";
+      });
+
+      await page.goto("/en/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      await expect(page.locator("html")).toHaveAttribute("data-mode", "light");
+      await page.screenshot({ path: "screenshots/discover-en-light-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // 5. Discover — Persian, desktop, Dark (1440x900 RTL)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/fa/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await page.screenshot({ path: "screenshots/discover-fa-dark-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // 6. Discover — English, Mobile drawer open (390x844 LTR)
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/en/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      const filterBtn = page.getByTestId("genre-filter-trigger");
+      await filterBtn.click();
+      await expect(page.locator("#genre-drawer")).toBeVisible();
+      await page.screenshot({ path: "screenshots/discover-mobile-en-drawer.png", fullPage: false });
+      await context.close();
+    }
+
+    // 7. Discover — Persian, Mobile drawer open (390x844 RTL)
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/fa/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      const filterBtn = page.getByTestId("genre-filter-trigger");
+      await filterBtn.click();
+      await expect(page.locator("#genre-drawer")).toBeVisible();
+      await page.screenshot({ path: "screenshots/discover-mobile-fa-drawer.png", fullPage: false });
+      await context.close();
+    }
+
+    // 8. Discover — English, Tablet Dark (768x1024)
+    {
+      const context = await browser.newContext({ viewport: { width: 768, height: 1024 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+
+      await page.goto("/en/discover?page=1");
+      await page.waitForLoadState("domcontentloaded");
+      await page.screenshot({ path: "screenshots/discover-en-dark-768.png", fullPage: false });
       await context.close();
     }
 
@@ -886,32 +1063,22 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
 
       const measurements = await measurePage.evaluate(() => {
         const container = document.querySelector(".page-container");
-        const sidebar = document.querySelector("section[aria-labelledby='discover-genres-title']");
+        const trigger = document.querySelector("[data-testid='genre-filter-trigger']");
         const grid = document.querySelector("section[aria-labelledby='discover-picks-title'] ul");
-        const flexParent = sidebar?.parentElement;
 
         const cRect = container?.getBoundingClientRect();
-        const sRect = sidebar?.getBoundingClientRect();
+        const tRect = trigger?.getBoundingClientRect();
         const gRect = grid?.getBoundingClientRect();
-
-        let gap = 0;
-        if (sRect && gRect) {
-          gap = Math.round(gRect.left - sRect.right);
-        } else if (flexParent) {
-          const comp = window.getComputedStyle(flexParent);
-          gap = parseFloat(comp.gap || comp.columnGap || "0");
-        }
 
         return {
           containerWidth: cRect ? Math.round(cRect.width) : 0,
-          sidebarWidth: sRect ? Math.round(sRect.width) : 0,
-          gap,
+          triggerWidth: tRect ? Math.round(tRect.width) : 0,
           gridWidth: gRect ? Math.round(gRect.width) : 0,
         };
       });
 
       console.log(
-        `Viewport ${vp.width}x${vp.height} -> page-container: ${measurements.containerWidth}px, sidebar: ${measurements.sidebarWidth}px, gap: ${measurements.gap}px, movie-grid: ${measurements.gridWidth}px`,
+        `Viewport ${vp.width}x${vp.height} -> page-container: ${measurements.containerWidth}px, trigger: ${measurements.triggerWidth}px, full-grid: ${measurements.gridWidth}px`,
       );
     }
     await layoutContext.close();
