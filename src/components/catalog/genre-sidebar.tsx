@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, type ComponentType } from "react";
 import {
   BookOpen,
+  ChevronDown,
   Clapperboard,
   Compass,
   Drama,
@@ -42,6 +43,7 @@ export interface GenreSidebarProps {
   allHref: string;
   filterButtonLabel: string;
   closeFiltersLabel: string;
+  scrollDownLabel?: string;
   selectedGenreKey?: string;
   genreItems: GenreItem[];
 }
@@ -81,12 +83,38 @@ export function GenreSidebar({
   allHref,
   filterButtonLabel,
   closeFiltersLabel,
+  scrollDownLabel,
   selectedGenreKey,
   genreItems,
 }: GenreSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
+
+  const checkScroll = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const { scrollTop, scrollHeight, clientHeight } = nav;
+    // Show downward indicator when additional content exists below visible scroll area
+    const hasMore = scrollHeight - scrollTop - clientHeight > 4;
+    setCanScrollDown(hasMore);
+  }, []);
+
+  const handleScrollDown = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const scrollAmount = Math.max(120, Math.round(nav.clientHeight * 0.6));
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    nav.scrollBy({
+      top: scrollAmount,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, []);
 
   const getFocusableElements = useCallback((): HTMLElement[] => {
     if (!drawerRef.current) return [];
@@ -102,6 +130,7 @@ export function GenreSidebar({
 
   const closeDrawer = useCallback(() => {
     setIsOpen(false);
+    setCanScrollDown(false);
     requestAnimationFrame(() => {
       triggerRef.current?.focus();
     });
@@ -177,9 +206,49 @@ export function GenreSidebar({
     };
   }, [isOpen]);
 
+  // Track scroll position and container size for downward arrow indicator
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Check scroll position once mounted and on subsequent frames
+    const frameId = requestAnimationFrame(() => {
+      checkScroll();
+    });
+
+    const nav = navRef.current;
+    if (!nav) return () => cancelAnimationFrame(frameId);
+
+    nav.addEventListener("scroll", checkScroll, { passive: true });
+    window.addEventListener("resize", checkScroll, { passive: true });
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        checkScroll();
+      });
+      resizeObserver.observe(nav);
+      if (drawerRef.current) {
+        resizeObserver.observe(drawerRef.current);
+      }
+    }
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      nav.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+      resizeObserver?.disconnect();
+    };
+  }, [isOpen, checkScroll, genreItems]);
+
   const selectedItem = genreItems.find((item) => item.key === selectedGenreKey);
   const titleId = ariaLabelledBy || "genre-drawer-title";
   const drawerId = "genre-drawer";
+
+  const isRtl =
+    typeof document !== "undefined" &&
+    (document.documentElement.lang === "fa" || document.documentElement.dir === "rtl");
+  const defaultScrollDownLabel = isRtl ? "مشاهده ژانرهای بیشتر" : "Scroll down for more genres";
+  const finalScrollDownLabel = scrollDownLabel || defaultScrollDownLabel;
 
   return (
     <>
@@ -206,15 +275,15 @@ export function GenreSidebar({
       {/* Edge Drawer Dialog & Backdrop (Unified for all viewports) */}
       {isOpen && (
         <div data-testid="genre-drawer-container">
-          {/* Backdrop */}
+          {/* Backdrop (Translucent dark overlay without blur) */}
           <div
-            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-50 bg-black/25 transition-opacity"
             onClick={closeDrawer}
             aria-hidden="true"
             data-testid="genre-drawer-backdrop"
           />
 
-          {/* Drawer Dialog Panel */}
+          {/* Drawer Dialog Panel (Target exactly 224px width, opaque surface without blur) */}
           <div
             id={drawerId}
             role="dialog"
@@ -222,15 +291,15 @@ export function GenreSidebar({
             aria-labelledby={titleId}
             ref={drawerRef}
             tabIndex={-1}
-            className="drawer-slide-in fixed inset-y-0 start-0 z-50 flex w-full max-w-xs flex-col bg-surface/95 backdrop-blur-xl shadow-2xl border-e border-line/60 p-5 outline-none"
+            className="drawer-slide-in fixed inset-y-0 start-0 z-50 flex w-56 max-w-[calc(100vw-2rem)] flex-col bg-surface shadow-2xl border-e border-line/60 p-3.5 outline-none"
           >
             {/* Drawer Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-line/50">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <SlidersHorizontal className="size-4" aria-hidden="true" />
+            <div className="flex items-center justify-between pb-2.5 border-b border-line/50">
+              <div className="flex items-center gap-2">
+                <div className="flex size-6.5 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  <SlidersHorizontal className="size-3.5" aria-hidden="true" />
                 </div>
-                <h2 id={titleId} className="text-base font-bold text-fg">
+                <h2 id={titleId} className="text-sm font-bold text-fg">
                   {genresTitle}
                 </h2>
               </div>
@@ -240,85 +309,108 @@ export function GenreSidebar({
                 aria-label={closeFiltersLabel}
                 className="rounded-lg p-1.5 text-muted hover:bg-surface-raised hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <X className="size-5" aria-hidden="true" />
+                <X className="size-4.5" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Drawer Navigation List */}
-            <nav aria-label={genresTitle} className="flex-1 overflow-y-auto py-3.5 space-y-1 sidebar-scroll pe-1.5">
-              <ul className="space-y-1">
-                {/* All Genres entry */}
-                <li key="all" className="mb-2 pb-2 border-b border-line/30">
-                  <Link
-                    href={allHref}
-                    onClick={closeDrawer}
-                    aria-current={!selectedGenreKey ? "page" : undefined}
-                    className={cn(
-                      "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                      !selectedGenreKey
-                        ? "bg-accent/15 border border-accent/30 text-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.12)]"
-                        : "text-muted hover:bg-surface-raised/70 hover:text-fg border border-transparent",
-                    )}
-                  >
-                    {!selectedGenreKey && (
-                      <span
-                        className="absolute inset-y-2 start-0 w-1 rounded-e-full bg-accent shadow-[0_0_8px_rgba(229,9,20,0.8)]"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span
+            {/* Drawer Navigation List Container */}
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              <nav
+                ref={navRef}
+                aria-label={genresTitle}
+                className="flex-1 overflow-y-auto py-2.5 space-y-1 sidebar-scroll pe-1.5"
+              >
+                <ul className="space-y-1 pb-10">
+                  {/* All Genres entry */}
+                  <li key="all" className="mb-2 pb-2 border-b border-line/30">
+                    <Link
+                      href={allHref}
+                      onClick={closeDrawer}
+                      aria-current={!selectedGenreKey ? "page" : undefined}
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors",
+                        "group relative flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",
                         !selectedGenreKey
-                          ? "bg-accent text-accent-fg shadow-[0_0_10px_rgba(229,9,20,0.35)]"
-                          : "bg-surface-raised/80 text-muted group-hover:bg-accent/15 group-hover:text-accent",
+                          ? "bg-accent/15 border border-accent/30 text-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.12)]"
+                          : "text-muted hover:bg-surface-raised/70 hover:text-fg border border-transparent",
                       )}
                     >
-                      <Clapperboard className="size-3.5" aria-hidden="true" />
-                    </span>
-                    <span className="truncate">{allLabel}</span>
-                  </Link>
-                </li>
-
-                {genreItems.map((item) => {
-                  const isSelected = selectedGenreKey === item.key;
-                  const IconComponent = GENRE_ICON_MAP[item.key] ?? Clapperboard;
-                  return (
-                    <li key={item.key}>
-                      <Link
-                        href={item.href}
-                        onClick={closeDrawer}
-                        aria-current={isSelected ? "page" : undefined}
+                      {!selectedGenreKey && (
+                        <span
+                          className="absolute inset-y-2 start-0 w-1 rounded-e-full bg-accent shadow-[0_0_8px_rgba(229,9,20,0.8)]"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span
                         className={cn(
-                          "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                          isSelected
-                            ? "bg-accent/15 border border-accent/30 text-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.12)]"
-                            : "text-muted hover:bg-surface-raised/70 hover:text-fg border border-transparent",
+                          "flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors",
+                          !selectedGenreKey
+                            ? "bg-accent text-accent-fg shadow-[0_0_10px_rgba(229,9,20,0.35)]"
+                            : "bg-surface-raised/80 text-muted group-hover:bg-accent/15 group-hover:text-accent",
                         )}
                       >
-                        {isSelected && (
-                          <span
-                            className="absolute inset-y-2 start-0 w-1 rounded-e-full bg-accent shadow-[0_0_8px_rgba(229,9,20,0.8)]"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <span
+                        <Clapperboard className="size-3.5" aria-hidden="true" />
+                      </span>
+                      <span className="truncate whitespace-nowrap">{allLabel}</span>
+                    </Link>
+                  </li>
+
+                  {genreItems.map((item) => {
+                    const isSelected = selectedGenreKey === item.key;
+                    const IconComponent = GENRE_ICON_MAP[item.key] ?? Clapperboard;
+                    return (
+                      <li key={item.key}>
+                        <Link
+                          href={item.href}
+                          onClick={closeDrawer}
+                          aria-current={isSelected ? "page" : undefined}
                           className={cn(
-                            "flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors",
+                            "group relative flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",
                             isSelected
-                              ? "bg-accent text-accent-fg shadow-[0_0_10px_rgba(229,9,20,0.35)]"
-                              : "bg-surface-raised/80 text-muted group-hover:bg-accent/15 group-hover:text-accent",
+                              ? "bg-accent/15 border border-accent/30 text-fg font-semibold shadow-[0_2px_12px_rgba(229,9,20,0.12)]"
+                              : "text-muted hover:bg-surface-raised/70 hover:text-fg border border-transparent",
                           )}
                         >
-                          <IconComponent className="size-3.5" aria-hidden="true" />
-                        </span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
+                          {isSelected && (
+                            <span
+                              className="absolute inset-y-2 start-0 w-1 rounded-e-full bg-accent shadow-[0_0_8px_rgba(229,9,20,0.8)]"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span
+                            className={cn(
+                              "flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors",
+                              isSelected
+                                ? "bg-accent text-accent-fg shadow-[0_0_10px_rgba(229,9,20,0.35)]"
+                                : "bg-surface-raised/80 text-muted group-hover:bg-accent/15 group-hover:text-accent",
+                            )}
+                          >
+                            <IconComponent className="size-3.5" aria-hidden="true" />
+                          </span>
+                          <span className="truncate whitespace-nowrap">{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+
+              {/* Downward Scroll Indicator (Task 2: subtle, non-intrusive, accessible button with bottom gradient) */}
+              {canScrollDown && (
+                <div
+                  data-testid="genre-drawer-scroll-indicator"
+                  className="pointer-events-none absolute bottom-0 inset-x-0 flex justify-center pb-2 pt-6 bg-gradient-to-t from-surface via-surface/90 to-transparent"
+                >
+                  <button
+                    type="button"
+                    onClick={handleScrollDown}
+                    aria-label={finalScrollDownLabel}
+                    className="pointer-events-auto flex items-center justify-center size-7 rounded-full bg-surface-raised border border-line shadow-md text-muted hover:text-fg hover:border-accent/40 hover:bg-surface transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <ChevronDown className="size-4 text-accent" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -177,6 +177,7 @@ export default async function DiscoverPage({
               allHref={buildGenreUrl(undefined)}
               filterButtonLabel={t("filterButton")}
               closeFiltersLabel={t("closeFilters")}
+              scrollDownLabel={t("scrollDown")}
               selectedGenreKey={selectedGenreKey}
               genreItems={genreItems}
             />
