@@ -290,14 +290,24 @@ describe("DesktopNav and MobileNavigation components", () => {
 
     const discoverLink = screen.getByRole("link", { name: "Discover" });
     expect(discoverLink.getAttribute("aria-current")).toBeNull();
+
+    expect(screen.queryByRole("link", { name: "Library" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Profile" })).toBeNull();
+    const links = screen.getAllByRole("link");
+    expect(links.length).toBe(2);
   });
 
-  it("renders MobileNavigation with aria-current='page' on active link and renders 4 grid columns", () => {
-    render(<MobileNavigation />);
+  it("renders MobileNavigation with aria-current='page' on active link and renders 2 items without incomplete routes", () => {
+    const { container } = render(<MobileNavigation />);
     const activeLink = screen.getByRole("link", { name: "Home" });
     expect(activeLink.getAttribute("aria-current")).toBe("page");
 
     const links = screen.getAllByRole("link");
-    expect(links.length).toBe(4);
+    expect(links.length).toBe(2);
+    expect(screen.queryByRole("link", { name: "Library" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Profile" })).toBeNull();
+
+    const list = container.querySelector("ul");
+    expect(list?.className).toContain("grid-cols-2");
   });
 });

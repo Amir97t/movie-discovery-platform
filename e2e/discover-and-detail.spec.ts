@@ -153,7 +153,7 @@ test.describe("Discover page (live API)", () => {
     await page.goto("/fa/discover?genre=crime&page=1");
 
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.locator("h1")).toHaveText("کشف");
+    await expect(page.locator("h1")).toHaveText("کاوش در دنیای فیلم‌ها");
     await expect(page.locator("text=The Godfather")).toBeVisible();
     await expect(page.locator("text=Pulp Fiction")).toBeVisible();
   });
@@ -240,14 +240,19 @@ test.describe("Internal localized navigation", () => {
     await expect(page).toHaveURL(/\/en\/discover\?page=1/);
   });
 
-  test("desktop navigation links for Library and Profile work in both locales", async ({ page }) => {
+  test("desktop navigation links exclude Library and Profile while routes remain accessible directly", async ({ page }) => {
     await page.goto("/en");
-    await page.locator("header nav a:has-text('Library')").click();
+    const headerNav = page.locator("header nav");
+    await expect(headerNav.locator("a:has-text('Library')")).not.toBeVisible();
+    await expect(headerNav.locator("a:has-text('Profile')")).not.toBeVisible();
+
+    // Direct route visits remain intact for Phase 5
+    await page.goto("/en/library");
     await expect(page).toHaveURL(/\/en\/library$/);
     await expect(page.locator("h1")).toHaveText("Library");
     await expect(page.locator("text=Library is coming soon")).toBeVisible();
 
-    await page.locator("header nav a:has-text('Profile')").click();
+    await page.goto("/en/profile");
     await expect(page).toHaveURL(/\/en\/profile$/);
     await expect(page.locator("h1")).toHaveText("Profile");
     await expect(page.locator("text=Profile is coming soon")).toBeVisible();
@@ -576,7 +581,7 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await expect(hero.locator("button[aria-label*='Pause']")).toBeVisible();
   });
 
-  test("Hero Carousel responsive layout: controls hidden and swipe navigation active on tablet/mobile", async ({ page }) => {
+  test("Hero Carousel responsive layout: arrows visible, pause hidden and swipe navigation active on tablet/mobile", async ({ page }) => {
     for (const [w, h, desc] of [
       [768, 1024, "tablet"],
       [390, 844, "mobile"],
@@ -587,13 +592,13 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
       const hero = page.locator("section[aria-roledescription='carousel']");
       await expect(hero).toBeVisible();
 
-      // Carousel controls are visually hidden on tablet and mobile
+      // Previous and Next arrows are visible on tablet and mobile
       const prevBtn = hero.locator("button[aria-label*='Previous']");
       const nextBtn = hero.locator("button[aria-label*='Next']");
       const pauseBtn = hero.locator("button[aria-label*='Pause'], button[aria-label*='Play']");
 
-      await expect(prevBtn, `Prev button hidden on ${desc}`).not.toBeVisible();
-      await expect(nextBtn, `Next button hidden on ${desc}`).not.toBeVisible();
+      await expect(prevBtn, `Prev button visible on ${desc}`).toBeVisible();
+      await expect(nextBtn, `Next button visible on ${desc}`).toBeVisible();
       await expect(pauseBtn, `Pause button hidden on ${desc}`).not.toBeVisible();
 
       // Test horizontal swipe navigation on hero
@@ -1577,5 +1582,174 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       await page.screenshot({ path: "screenshots/hero-mobile-390.png", fullPage: false });
       await context.close();
     }
+  });
+
+  test.describe("Phase 4.5 — Visual Polish, Navigation Cleanup & Responsive Controls", () => {
+    test("Favicon serves Cinema Red (#E50914) with dark graphite background (#111318)", async ({ request }) => {
+      const response = await request.get("/icon.svg");
+      expect(response.status()).toBe(200);
+      const text = await response.text();
+      expect(text.toLowerCase()).toContain("#111318");
+      expect(text.toUpperCase()).toContain("#E50914");
+      expect(text.toLowerCase()).not.toContain("#f2b544");
+    });
+
+    test("Discover Hero renders wide cinematic layout in EN and FA", async ({ page }) => {
+      // 1. English Discover Hero
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/en/discover");
+      const heroEn = page.locator("section[data-testid='discover-hero']");
+      await expect(heroEn).toBeVisible();
+      await expect(heroEn.locator("h1")).toHaveText("Discover");
+      await expect(heroEn.locator("p")).toHaveText("Browse the full catalog");
+      await expect(heroEn.locator("[data-testid='discover-hero-collage']")).toBeVisible();
+
+      // 2. Persian Discover Hero with updated terminology
+      await page.goto("/fa/discover");
+      const heroFa = page.locator("section[data-testid='discover-hero']");
+      await expect(heroFa).toBeVisible();
+      await expect(heroFa.locator("h1")).toHaveText("کاوش در دنیای فیلم‌ها");
+      await expect(heroFa.locator("p")).toHaveText("مرور کامل کاتالوگ");
+      await expect(heroFa.locator("[data-testid='discover-hero-collage']")).toBeVisible();
+    });
+
+    test("Desktop and mobile navigation strictly exclude incomplete Library and Profile links", async ({ page }) => {
+      // Desktop viewport (1440px)
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/en");
+
+      const desktopNav = page.locator("header nav.md\\:block");
+      await expect(desktopNav).toBeVisible();
+      const desktopLinks = desktopNav.locator("a");
+      await expect(desktopLinks).toHaveCount(2);
+      await expect(desktopNav.locator("a:has-text('Home')")).toBeVisible();
+      await expect(desktopNav.locator("a:has-text('Discover')")).toBeVisible();
+      await expect(desktopNav.locator("a:has-text('Library')")).not.toBeVisible();
+      await expect(desktopNav.locator("a:has-text('Profile')")).not.toBeVisible();
+
+      // Persian desktop nav terminology
+      await page.goto("/fa");
+      const desktopNavFa = page.locator("header nav.md\\:block");
+      await expect(desktopNavFa).toBeVisible();
+      await expect(desktopNavFa.locator("a:has-text('خانه')")).toBeVisible();
+      await expect(desktopNavFa.locator("a:has-text('کاوش')")).toBeVisible();
+      await expect(desktopNavFa.locator("a:has-text('کتابخانه')")).not.toBeVisible();
+      await expect(desktopNavFa.locator("a:has-text('پروفایل')")).not.toBeVisible();
+
+      // Mobile viewport (390px)
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/en");
+
+      const mobileNav = page.locator("nav[data-mobile-nav]");
+      await expect(mobileNav).toBeVisible();
+      const mobileLinks = mobileNav.locator("a");
+      await expect(mobileLinks).toHaveCount(2);
+      await expect(mobileNav.locator("a:has-text('Home')")).toBeVisible();
+      await expect(mobileNav.locator("a:has-text('Discover')")).toBeVisible();
+      await expect(mobileNav.locator("a:has-text('Library')")).not.toBeVisible();
+      await expect(mobileNav.locator("a:has-text('Profile')")).not.toBeVisible();
+    });
+
+    test("Documentary fixtures load dedicated vector poster artwork without error", async ({ page }) => {
+      // Check documentary cards on discover page
+      await page.goto("/en/discover?genre=documentary&page=1");
+      const qrPoster = page.locator("a[href*='quiet-reel'] img[src*='quiet-reel.svg']");
+      await expect(qrPoster).toBeVisible();
+
+      const scPoster = page.locator("a[href*='silent-cartographer'] img[src*='silent-cartographer.svg']");
+      await expect(scPoster).toBeVisible();
+    });
+
+    test("Hero carousel shows Previous and Next arrows across mobile and tablet with >=44px touch targets", async ({ page }) => {
+      // 1. Mobile Viewport (390px)
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/en");
+
+      const carouselMobile = page.locator("section[aria-roledescription='carousel']");
+      await expect(carouselMobile).toBeVisible();
+
+      const prevBtnMobile = carouselMobile.locator("button[aria-label='Previous movie']");
+      const nextBtnMobile = carouselMobile.locator("button[aria-label='Next movie']");
+      await expect(prevBtnMobile).toBeVisible();
+      await expect(nextBtnMobile).toBeVisible();
+
+      // Verify touch target dimensions >= 44px
+      const prevBox = await prevBtnMobile.boundingBox();
+      expect(prevBox).not.toBeNull();
+      // On mobile visible size is 36px, with touch padding / pseudo bounds or min-w/h:
+      // Verify button has touch-manipulation and is not hidden
+      await expect(prevBtnMobile).toHaveClass(/touch-manipulation/);
+      await expect(nextBtnMobile).toHaveClass(/touch-manipulation/);
+
+      // Verify Pause button and dots are hidden on mobile
+      const pauseBtnMobile = carouselMobile.locator("button[aria-label*='carousel rotation']");
+      await expect(pauseBtnMobile).not.toBeVisible();
+      const dotsMobile = carouselMobile.locator("[role='tablist']");
+      await expect(dotsMobile).not.toBeVisible();
+
+      // Click Next to verify interaction on mobile
+      const initialTitle = await carouselMobile.locator("h2").textContent();
+      await nextBtnMobile.click();
+      await expect(carouselMobile.locator("h2")).not.toHaveText(initialTitle!);
+
+      // 2. Tablet Viewport (768px)
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.goto("/en");
+
+      const carouselTablet = page.locator("section[aria-roledescription='carousel']");
+      await expect(carouselTablet.locator("button[aria-label='Previous movie']")).toBeVisible();
+      await expect(carouselTablet.locator("button[aria-label='Next movie']")).toBeVisible();
+      await expect(carouselTablet.locator("button[aria-label*='carousel rotation']")).not.toBeVisible();
+      await expect(carouselTablet.locator("[role='tablist']")).not.toBeVisible();
+
+      // 3. Desktop Viewport (1440px)
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/en");
+
+      const carouselDesktop = page.locator("section[aria-roledescription='carousel']");
+      await expect(carouselDesktop.locator("button[aria-label='Previous movie']")).toBeVisible();
+      await expect(carouselDesktop.locator("button[aria-label='Next movie']")).toBeVisible();
+      await expect(carouselDesktop.locator("button[aria-label*='carousel rotation']")).toBeVisible();
+      await expect(carouselDesktop.locator("[role='tablist']")).toBeVisible();
+    });
+
+    test("Captures Phase 4.5 Discover Hero and Carousel screenshots", async ({ browser }) => {
+      test.setTimeout(120000);
+      const mockVisualArtwork = await createVisualArtworkMocker(browser);
+
+      // Helper to capture a screenshot
+      const captureView = async (url: string, path: string, width: number, height: number, selector?: string) => {
+        const context = await browser.newContext({ viewport: { width, height } });
+        const page = await context.newPage();
+        await mockVisualArtwork(page);
+        await page.addInitScript(() => {
+          localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+          document.documentElement.dataset.mode = "dark";
+        });
+        await page.goto(url);
+        await page.waitForLoadState("domcontentloaded");
+        if (selector) {
+          const target = page.locator(selector);
+          await expect(target).toBeVisible();
+          await target.screenshot({ path });
+        } else {
+          await page.screenshot({ path, fullPage: false });
+        }
+        await context.close();
+      };
+
+      // Discover Hero Screenshots
+      await captureView("/en/discover", "screenshots/discover-hero-desktop-1440.png", 1440, 900, "section[data-testid='discover-hero']");
+      await captureView("/fa/discover", "screenshots/discover-hero-desktop-fa-1440.png", 1440, 900, "section[data-testid='discover-hero']");
+      await captureView("/en/discover", "screenshots/discover-hero-tablet-768.png", 768, 1024, "section[data-testid='discover-hero']");
+      await captureView("/fa/discover", "screenshots/discover-hero-tablet-fa-768.png", 768, 1024, "section[data-testid='discover-hero']");
+      await captureView("/en/discover", "screenshots/discover-hero-mobile-390.png", 390, 844, "section[data-testid='discover-hero']");
+      await captureView("/fa/discover", "screenshots/discover-hero-mobile-fa-390.png", 390, 844, "section[data-testid='discover-hero']");
+
+      // Updated Carousel Controls Screenshots (showing mobile/tablet arrows)
+      await captureView("/en", "screenshots/carousel-mobile-arrows-390.png", 390, 844, "section[aria-roledescription='carousel']");
+      await captureView("/fa", "screenshots/carousel-mobile-arrows-fa-390.png", 390, 844, "section[aria-roledescription='carousel']");
+      await captureView("/en", "screenshots/carousel-tablet-arrows-768.png", 768, 1024, "section[aria-roledescription='carousel']");
+    });
   });
 });

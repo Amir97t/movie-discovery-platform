@@ -431,15 +431,24 @@ describe("HeroCarousel", () => {
   });
 
   describe("Breakpoint-aware layout and auto-rotation", () => {
-    it("positions Previous and Next at opposite logical edges with vertical centering", () => {
+    it("positions Previous and Next at opposite logical edges with vertical centering and responsive visibility", () => {
       render(<HeroCarousel candidates={mockCandidates} />);
 
       const prevBtn = screen.getByRole("button", { name: "Previous slide" });
       const nextBtn = screen.getByRole("button", { name: "Next slide" });
       const pauseBtn = screen.getByRole("button", { name: "Pause carousel" });
 
-      expect(prevBtn).toHaveClass("start-4", "lg:start-6", "top-1/2", "-translate-y-1/2");
-      expect(nextBtn).toHaveClass("end-4", "lg:end-6", "top-1/2", "-translate-y-1/2");
+      expect(prevBtn).toHaveClass("start-2", "sm:start-4", "lg:start-6", "top-1/2", "-translate-y-1/2");
+      expect(prevBtn).toHaveClass("flex", "size-11", "touch-manipulation");
+      expect(prevBtn.querySelector("span")).toHaveClass("size-9", "sm:size-10", "lg:size-11");
+      expect(prevBtn).not.toHaveClass("hidden");
+
+      expect(nextBtn).toHaveClass("end-2", "sm:end-4", "lg:end-6", "top-1/2", "-translate-y-1/2");
+      expect(nextBtn).toHaveClass("flex", "size-11", "touch-manipulation");
+      expect(nextBtn.querySelector("span")).toHaveClass("size-9", "sm:size-10", "lg:size-11");
+      expect(nextBtn).not.toHaveClass("hidden");
+
+      expect(pauseBtn).toHaveClass("hidden", "lg:flex");
       expect(pauseBtn).toHaveClass("top-4", "end-4", "sm:top-6", "sm:end-6");
     });
 

@@ -23,7 +23,7 @@ export function fixtureToMovie(fixture: FixtureMovie, locale: CatalogLocale): Mo
     runtimeMinutes: fixture.runtimeMinutes,
     genres: [...fixture.genres],
     synopsis: fixture.synopsis ? fixture.synopsis[locale] : null,
-    posterUrl: null,
+    posterUrl: fixture.posterUrl ?? null,
     backdropUrl: null,
     art: fixture.art,
     director: null,

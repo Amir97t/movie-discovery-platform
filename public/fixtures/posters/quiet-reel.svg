@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="600" height="900">
+  <defs>
+    <!-- Background Vignette -->
+    <radialGradient id="qr-bg" cx="50%" cy="45%" r="70%" fx="50%" fy="40%">
+      <stop offset="0%" stop-color="#241a15" />
+      <stop offset="45%" stop-color="#15100e" />
+      <stop offset="85%" stop-color="#0a0807" />
+      <stop offset="100%" stop-color="#050403" />
+    </radialGradient>
+
+    <!-- Projector Beam Gradient -->
+    <linearGradient id="qr-beam" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.35" />
+      <stop offset="30%" stop-color="#f59e0b" stop-opacity="0.15" />
+      <stop offset="70%" stop-color="#d97706" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Film Strip Metallic Gradient -->
+    <linearGradient id="qr-film" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a2421" />
+      <stop offset="50%" stop-color="#1a1614" />
+      <stop offset="100%" stop-color="#0e0c0b" />
+    </linearGradient>
+
+    <!-- Brass / Gold Accents -->
+    <linearGradient id="qr-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="30%" stop-color="#fbbf24" />
+      <stop offset="60%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+
+    <!-- Film Reel Center -->
+    <radialGradient id="qr-reel-hub" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#451a03" />
+      <stop offset="60%" stop-color="#1c1917" />
+      <stop offset="100%" stop-color="#0c0a09" />
+    </radialGradient>
+
+    <!-- Film Perforation Pattern -->
+    <pattern id="qr-perf" width="20" height="24" patternUnits="userSpaceOnUse">
+      <rect x="4" y="5" width="12" height="14" rx="2.5" fill="#050403" stroke="#78350f" stroke-width="0.8" opacity="0.9" />
+    </pattern>
+  </defs>
+
+  <!-- Base Canvas -->
+  <rect width="600" height="900" fill="url(#qr-bg)" />
+
+  <!-- Subtle Film Grain / Atmospheric Lines -->
+  <g opacity="0.08" stroke="#fef3c7" stroke-width="0.5">
+    <line x1="72" y1="0" x2="72" y2="900" stroke-dasharray="8 12" />
+    <line x1="528" y1="0" x2="528" y2="900" stroke-dasharray="8 12" />
+    <circle cx="300" cy="420" r="260" stroke-dasharray="3 6" />
+    <circle cx="300" cy="420" r="280" stroke-dasharray="1 5" />
+  </g>
+
+  <!-- Projector Light Cone from Top Left -->
+  <polygon points="0,0 260,0 520,620 180,720" fill="url(#qr-beam)" />
+
+  <!-- Dusty Light Flares -->
+  <g opacity="0.6">
+    <circle cx="140" cy="180" r="2" fill="#fef3c7" opacity="0.8" />
+    <circle cx="210" cy="240" r="1.5" fill="#fef3c7" opacity="0.7" />
+    <circle cx="290" cy="310" r="2.5" fill="#fef3c7" opacity="0.6" />
+    <circle cx="180" cy="380" r="1.8" fill="#fde68a" opacity="0.5" />
+    <circle cx="360" cy="400" r="1.2" fill="#fef3c7" opacity="0.6" />
+  </g>
+
+  <!-- Archival Framing Border -->
+  <rect x="28" y="28" width="544" height="844" rx="6" fill="none" stroke="url(#qr-gold)" stroke-width="1.2" opacity="0.45" />
+  <rect x="36" y="36" width="528" height="828" rx="4" fill="none" stroke="#78350f" stroke-width="0.8" opacity="0.3" />
+
+  <!-- Corner Register Marks -->
+  <g stroke="url(#qr-gold)" stroke-width="1.2" opacity="0.6">
+    <path d="M 24,40 L 40,40 M 40,24 L 40,40" />
+    <path d="M 576,40 L 560,40 M 560,24 L 560,40" />
+    <path d="M 24,860 L 40,860 M 40,876 L 40,860" />
+    <path d="M 576,860 L 560,860 M 560,876 L 560,860" />
+  </g>
+
+  <!-- Header Header Kicker & Laurel Selection -->
+  <g text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <!-- Archival Laurel Wreath (Vector) -->
+    <g transform="translate(300, 95)" opacity="0.8">
+      <path d="M -60,0 C -50,-12 -25,-18 0,-18 C 25,-18 50,-12 60,0" fill="none" stroke="url(#qr-gold)" stroke-width="1" />
+      <!-- Left Leaves -->
+      <path d="M -45,-8 C -52,-15 -42,-18 -38,-12 Z" fill="#d97706" />
+      <path d="M -30,-15 C -36,-22 -26,-24 -23,-17 Z" fill="#d97706" />
+      <path d="M -12,-18 C -17,-26 -8,-27 -5,-20 Z" fill="#d97706" />
+      <!-- Right Leaves -->
+      <path d="M 45,-8 C 52,-15 42,-18 38,-12 Z" fill="#d97706" />
+      <path d="M 30,-15 C 36,-22 26,-24 23,-17 Z" fill="#d97706" />
+      <path d="M 12,-18 C 17,-26 8,-27 5,-20 Z" fill="#d97706" />
+      <text y="-4" font-size="9" font-weight="700" letter-spacing="3" fill="#fef3c7" text-anchor="middle">OFFICIAL SELECTION</text>
+      <text y="9" font-size="7.5" font-weight="600" letter-spacing="2" fill="#d97706" text-anchor="middle">INTERNATIONAL CINEMATHEQUE ARCHIVE</text>
+    </g>
+
+    <text x="300" y="145" font-size="10" font-weight="600" letter-spacing="4" fill="#a8a29e">NITRATE FILM PRESERVATION SERIES</text>
+    <line x1="220" y1="155" x2="380" y2="155" stroke="url(#qr-gold)" stroke-width="0.8" opacity="0.7" />
+  </g>
+
+  <!-- Central Vintage 35mm Film Reel Artwork -->
+  <g id="film-reel-assembly" transform="translate(300, 400)">
+    <!-- Swirling Nitrate Film Ribbon -->
+    <path d="M -240,-120 C -150,-240 180,-180 230,-60 C 270,40 210,180 120,240 C 30,300 -160,260 -210,160 C -250,70 -190,-40 -120,-80"
+          fill="none" stroke="url(#qr-film)" stroke-width="48" stroke-linecap="round" opacity="0.85" filter="drop-shadow(0 12px 24px rgba(0,0,0,0.8))" />
+    <!-- Perforations along ribbon edge -->
+    <path d="M -240,-120 C -150,-240 180,-180 230,-60 C 270,40 210,180 120,240 C 30,300 -160,260 -210,160 C -250,70 -190,-40 -120,-80"
+          fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 8" opacity="0.6" />
+
+    <!-- Outer Reel Rim -->
+    <circle cx="0" cy="0" r="160" fill="none" stroke="#292524" stroke-width="20" opacity="0.9" />
+    <circle cx="0" cy="0" r="170" fill="none" stroke="url(#qr-gold)" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="150" fill="none" stroke="#78350f" stroke-width="1.5" />
+
+    <!-- Film Wound on Reel -->
+    <circle cx="0" cy="0" r="148" fill="#14110f" />
+    <!-- Coiled layers -->
+    <circle cx="0" cy="0" r="136" fill="none" stroke="#1c1917" stroke-width="2" />
+    <circle cx="0" cy="0" r="124" fill="none" stroke="#292524" stroke-width="1.8" />
+    <circle cx="0" cy="0" r="112" fill="none" stroke="#1c1917" stroke-width="2" />
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#292524" stroke-width="1.8" />
+    <circle cx="0" cy="0" r="88" fill="none" stroke="#1c1917" stroke-width="2" />
+
+    <!-- 6-Spoke Vintage Cast Hub -->
+    <circle cx="0" cy="0" r="76" fill="url(#qr-reel-hub)" stroke="url(#qr-gold)" stroke-width="3" />
+    <circle cx="0" cy="0" r="28" fill="#0c0a09" stroke="#fbbf24" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="10" fill="#f59e0b" />
+
+    <!-- Reel Cutout Holes (6 Spokes) -->
+    <g fill="#090706" stroke="url(#qr-gold)" stroke-width="1.5">
+      <circle cx="0" cy="-52" r="15" />
+      <circle cx="45" cy="-26" r="15" />
+      <circle cx="45" cy="26" r="15" />
+      <circle cx="0" cy="52" r="15" />
+      <circle cx="-45" cy="26" r="15" />
+      <circle cx="-45" cy="-26" r="15" />
+    </g>
+
+    <!-- Film Projector Aperture Crosshair -->
+    <g stroke="url(#qr-gold)" stroke-width="1" opacity="0.7">
+      <line x1="-200" y1="0" x2="-175" y2="0" />
+      <line x1="175" y1="0" x2="200" y2="0" />
+      <line x1="0" y1="-200" x2="0" y2="-175" />
+      <line x1="0" y1="175" x2="0" y2="200" />
+    </g>
+  </g>
+
+  <!-- Title & Billing Typography -->
+  <g text-anchor="middle">
+    <!-- Sub-lead -->
+    <text x="300" y="630" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" letter-spacing="6" fill="#d97706">
+      A DOCUMENTARY RESTORATION
+    </text>
+
+    <!-- Main Title -->
+    <text x="300" y="680" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="700" letter-spacing="3" fill="#fef3c7" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.9))">
+      THE QUIET REEL
+    </text>
+
+    <!-- Subtitle / Hook -->
+    <text x="300" y="715" font-family="Georgia, serif" font-style="italic" font-size="14" fill="#d6d3d1" letter-spacing="1">
+      What the nitrate archives refused to forget
+    </text>
+
+    <line x1="180" y1="738" x2="420" y2="738" stroke="url(#qr-gold)" stroke-width="1" opacity="0.6" />
+
+    <!-- Technical Badges -->
+    <g transform="translate(300, 765)" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" letter-spacing="2" fill="#a8a29e">
+      <rect x="-185" y="-12" width="105" height="22" rx="3" fill="#1c1917" stroke="#44403c" stroke-width="0.8" />
+      <text x="-132" y="3" fill="#fbbf24">35MM NITRATE</text>
+
+      <rect x="-65" y="-12" width="130" height="22" rx="3" fill="#1c1917" stroke="#44403c" stroke-width="0.8" />
+      <text x="0" y="3" fill="#fef3c7">88 MIN • 4K SCAN</text>
+
+      <rect x="80" y="-12" width="105" height="22" rx="3" fill="#1c1917" stroke="#44403c" stroke-width="0.8" />
+      <text x="132" y="3" fill="#fbbf24">MONO ARCHIVE</text>
+    </g>
+
+    <!-- Production Credit Block -->
+    <text x="300" y="820" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="500" letter-spacing="2" fill="#78716c">
+      DIRECTED BY ELENA ROSTOVA • RESTORED BY THE CINEMA HERITAGE LAB
+    </text>
+    <text x="300" y="834" font-family="system-ui, -apple-system, sans-serif" font-size="7.5" font-weight="600" letter-spacing="3" fill="#d97706">
+      © 2024 DOCUMENTARY HERITAGE ARCHIVES • ALL RIGHTS PRESERVED
+    </text>
+  </g>
+</svg>

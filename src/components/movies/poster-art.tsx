@@ -47,6 +47,7 @@ export function PosterArt({
           src={posterUrl!}
           alt=""
           fill
+          unoptimized={Boolean(posterUrl?.endsWith(".svg"))}
           sizes="(max-width: 639px) 44vw, (max-width: 1023px) 28vw, (max-width: 1279px) 21vw, 18vw"
           className={cn(
             "object-cover transition-opacity duration-300",

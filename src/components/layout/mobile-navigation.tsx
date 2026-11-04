@@ -25,7 +25,7 @@ export function MobileNavigation() {
       data-mobile-nav=""
       className="liquid-glass fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] shadow-2xl md:hidden"
     >
-      <ul ref={containerRef} className="relative grid grid-cols-4">
+      <ul ref={containerRef} className="relative grid grid-cols-2">
         {/* Liquid Active Indicator Capsule */}
         {isVisible && (
           <li

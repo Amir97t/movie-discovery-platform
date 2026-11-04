@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="600" height="900">
+  <defs>
+    <!-- Ocean Nautical Abyss Background Gradient -->
+    <radialGradient id="sc-bg" cx="50%" cy="46%" r="75%" fx="50%" fy="42%">
+      <stop offset="0%" stop-color="#082b24" />
+      <stop offset="40%" stop-color="#051c17" />
+      <stop offset="80%" stop-color="#03100e" />
+      <stop offset="100%" stop-color="#010706" />
+    </radialGradient>
+
+    <!-- Emerald Glow -->
+    <radialGradient id="sc-glow" cx="50%" cy="44%" r="45%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.22" />
+      <stop offset="60%" stop-color="#059669" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#047857" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Brass / Cartography Gold Gradient -->
+    <linearGradient id="sc-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ca8a04" />
+      <stop offset="35%" stop-color="#fef08a" />
+      <stop offset="70%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#854d0e" />
+    </linearGradient>
+
+    <!-- Emerald Edge Gradient -->
+    <linearGradient id="sc-emerald" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#047857" />
+      <stop offset="50%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base Oceanic Field -->
+  <rect width="600" height="900" fill="url(#sc-bg)" />
+
+  <!-- Center Emerald Ambient Light -->
+  <circle cx="300" cy="400" r="320" fill="url(#sc-glow)" />
+
+  <!-- Bathymetric / Coastline Contour Lines -->
+  <g fill="none" stroke="#10b981" opacity="0.2" stroke-width="1.2">
+    <!-- Island Landmass Contours -->
+    <path d="M 120,240 Q 180,210 240,260 T 360,250 T 460,310 T 480,440 T 420,530 T 300,560 T 170,510 T 110,380 Z" />
+    <path d="M 140,260 Q 190,230 250,280 T 350,270 T 440,330 T 460,430 T 400,510 T 300,530 T 190,490 T 130,390 Z" opacity="0.6" />
+    <path d="M 160,285 Q 210,255 260,295 T 340,290 T 415,345 T 435,420 T 385,485 T 300,505 T 210,470 T 155,395 Z" opacity="0.4" />
+    <path d="M 190,320 Q 230,290 280,320 T 340,315 T 390,360 T 405,410 T 365,455 T 300,470 T 235,445 T 185,395 Z" opacity="0.3" />
+  </g>
+
+  <!-- Chart Graticules (Latitude & Longitude Rhumb Lines) -->
+  <g stroke="url(#sc-gold)" stroke-width="0.75" opacity="0.35">
+    <!-- Rhumb radiating lines from center -->
+    <line x1="300" y1="400" x2="300" y2="40" stroke-dasharray="4 4" />
+    <line x1="300" y1="400" x2="300" y2="760" stroke-dasharray="4 4" />
+    <line x1="300" y1="400" x2="60" y2="400" stroke-dasharray="4 4" />
+    <line x1="300" y1="400" x2="540" y2="400" stroke-dasharray="4 4" />
+    <line x1="300" y1="400" x2="50" y2="150" stroke-dasharray="2 6" />
+    <line x1="300" y1="400" x2="550" y2="150" stroke-dasharray="2 6" />
+    <line x1="300" y1="400" x2="50" y2="650" stroke-dasharray="2 6" />
+    <line x1="300" y1="400" x2="550" y2="650" stroke-dasharray="2 6" />
+
+    <!-- Range Rings -->
+    <circle cx="300" cy="400" r="180" stroke-dasharray="4 4" />
+    <circle cx="300" cy="400" r="230" stroke-dasharray="2 6" opacity="0.5" />
+    <circle cx="300" cy="400" r="260" stroke-dasharray="1 8" opacity="0.3" />
+  </g>
+
+  <!-- Border Frame with Coordinates -->
+  <rect x="28" y="28" width="544" height="844" rx="6" fill="none" stroke="url(#sc-gold)" stroke-width="1.5" opacity="0.55" />
+  <rect x="36" y="36" width="528" height="828" rx="4" fill="none" stroke="#047857" stroke-width="0.8" opacity="0.4" />
+
+  <!-- Degrees / Minutes Marks on Border -->
+  <g font-family="monospace" font-size="7.5" fill="#fef08a" opacity="0.6">
+    <text x="300" y="24" text-anchor="middle">64° 08' 42" N — 021° 56' 04" W</text>
+    <text x="300" y="885" text-anchor="middle">CHART DATUM: HYDROGRAPHIC OFFICE SURVEY 1889</text>
+  </g>
+
+  <!-- Header Section with Laurel Selection -->
+  <g text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+    <!-- Laurel Wreath -->
+    <g transform="translate(300, 95)" opacity="0.85">
+      <path d="M -60,0 C -50,-12 -25,-18 0,-18 C 25,-18 50,-12 60,0" fill="none" stroke="url(#sc-gold)" stroke-width="1" />
+      <path d="M -45,-8 C -52,-15 -42,-18 -38,-12 Z" fill="#ca8a04" />
+      <path d="M -30,-15 C -36,-22 -26,-24 -23,-17 Z" fill="#ca8a04" />
+      <path d="M -12,-18 C -17,-26 -8,-27 -5,-20 Z" fill="#ca8a04" />
+      <path d="M 45,-8 C 52,-15 42,-18 38,-12 Z" fill="#ca8a04" />
+      <path d="M 30,-15 C 36,-22 26,-24 23,-17 Z" fill="#ca8a04" />
+      <path d="M 12,-18 C 17,-26 8,-27 5,-20 Z" fill="#ca8a04" />
+      <text y="-4" font-size="9" font-weight="700" letter-spacing="3" fill="#fef08a">OFFICIAL SELECTION</text>
+      <text y="9" font-size="7.5" font-weight="600" letter-spacing="2" fill="#34d399">ROYAL GEOGRAPHICAL EXPEDITIONS</text>
+    </g>
+
+    <text x="300" y="145" font-size="10" font-weight="600" letter-spacing="4" fill="#a7f3d0">A CARTOGRAPHIC DOCUMENTARY</text>
+    <line x1="210" y1="155" x2="390" y2="155" stroke="url(#sc-gold)" stroke-width="0.8" opacity="0.7" />
+  </g>
+
+  <!-- Central Antique Compass Rose Artwork -->
+  <g id="compass-rose" transform="translate(300, 400)">
+    <!-- Outer Brass Dial Ring -->
+    <circle cx="0" cy="0" r="140" fill="#021410" stroke="url(#sc-gold)" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="132" fill="none" stroke="#047857" stroke-width="1.2" />
+    <circle cx="0" cy="0" r="124" fill="none" stroke="url(#sc-gold)" stroke-width="1" stroke-dasharray="2 4" />
+
+    <!-- Compass Degree Ticks (36 ticks) -->
+    <g stroke="url(#sc-gold)" stroke-width="1" opacity="0.75">
+      <line x1="0" y1="-140" x2="0" y2="-130" stroke-width="2" stroke="#fef08a" />
+      <line x1="0" y1="140" x2="0" y2="130" stroke-width="2" />
+      <line x1="-140" y1="0" x2="-130" y2="0" stroke-width="2" />
+      <line x1="140" y1="0" x2="130" y2="0" stroke-width="2" />
+      <line x1="-99" y1="-99" x2="-92" y2="-92" />
+      <line x1="99" y1="-99" x2="92" y2="-92" />
+      <line x1="-99" y1="99" x2="-92" y2="92" />
+      <line x1="99" y1="99" x2="92" y2="92" />
+    </g>
+
+    <!-- Cardinal Direction Labels -->
+    <g font-family="Georgia, serif" font-size="14" font-weight="700" fill="#fef08a" text-anchor="middle">
+      <text x="0" y="-115">N</text>
+      <text x="0" y="126">S</text>
+      <text x="122" y="5">E</text>
+      <text x="-122" y="5">W</text>
+    </g>
+
+    <!-- 16-Point Cartographic Star -->
+    <!-- Secondary Points (NE, NW, SE, SW) -->
+    <g transform="rotate(45)" fill="url(#sc-gold)" opacity="0.65">
+      <polygon points="0,-95 12,-18 0,0 -12,-18" />
+      <polygon points="0,95 12,18 0,0 -12,18" />
+      <polygon points="-95,0 -18,12 0,0 -18,-12" />
+      <polygon points="95,0 18,12 0,0 18,-12" />
+    </g>
+
+    <!-- Primary Cardinal Points (N, S, E, W) with Dual Tone Light/Shadow -->
+    <!-- North Arrow (Polished Gold and Emerald Shadow) -->
+    <polygon points="0,-125 18,-20 0,0" fill="#fef08a" />
+    <polygon points="0,-125 -18,-20 0,0" fill="#ca8a04" />
+    <!-- South Arrow -->
+    <polygon points="0,125 18,20 0,0" fill="#ca8a04" />
+    <polygon points="0,125 -18,20 0,0" fill="#854d0e" />
+    <!-- East Arrow -->
+    <polygon points="125,0 20,18 0,0" fill="#fef08a" />
+    <polygon points="125,0 20,-18 0,0" fill="#ca8a04" />
+    <!-- West Arrow -->
+    <polygon points="-125,0 -20,18 0,0" fill="#ca8a04" />
+    <polygon points="-125,0 -20,-18 0,0" fill="#854d0e" />
+
+    <!-- Center Brass Boss / Jewel -->
+    <circle cx="0" cy="0" r="22" fill="#011812" stroke="url(#sc-gold)" stroke-width="2" />
+    <circle cx="0" cy="0" r="14" fill="#047857" stroke="#fef08a" stroke-width="1.5" />
+    <circle cx="0" cy="0" r="5" fill="#fef08a" />
+  </g>
+
+  <!-- Title & Typography Block -->
+  <g text-anchor="middle">
+    <!-- Sub-lead -->
+    <text x="300" y="630" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" letter-spacing="6" fill="#34d399">
+      A TALE OF THE UNMAPPED WORLD
+    </text>
+
+    <!-- Main Title -->
+    <text x="300" y="680" font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="700" letter-spacing="3" fill="#fef08a" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.9))">
+      THE SILENT CARTOGRAPHER
+    </text>
+
+    <!-- Subtitle / Hook -->
+    <text x="300" y="715" font-family="Georgia, serif" font-style="italic" font-size="14" fill="#a7f3d0" letter-spacing="1">
+      Before satellite horizons, one surveyor drew the edge of the sea
+    </text>
+
+    <line x1="170" y1="738" x2="430" y2="738" stroke="url(#sc-gold)" stroke-width="1" opacity="0.6" />
+
+    <!-- Technical / Exhibition Badges -->
+    <g transform="translate(300, 765)" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" letter-spacing="2" fill="#6ee7b7">
+      <rect x="-185" y="-12" width="105" height="22" rx="3" fill="#062e24" stroke="#047857" stroke-width="0.8" />
+      <text x="-132" y="3" fill="#fef08a">HISTORICAL</text>
+
+      <rect x="-65" y="-12" width="130" height="22" rx="3" fill="#062e24" stroke="#047857" stroke-width="0.8" />
+      <text x="0" y="3" fill="#a7f3d0">99 MIN • EXPEDITION</text>
+
+      <rect x="80" y="-12" width="105" height="22" rx="3" fill="#062e24" stroke="#047857" stroke-width="0.8" />
+      <text x="132" y="3" fill="#fef08a">ARCHIVAL MAPS</text>
+    </g>
+
+    <!-- Production Credit Block -->
+    <text x="300" y="820" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="500" letter-spacing="2" fill="#059669">
+      PRODUCED BY GEOGRAPHIC SURVEY PRODUCTIONS • NARRATED BY MALCOLM FINCH
+    </text>
+    <text x="300" y="834" font-family="system-ui, -apple-system, sans-serif" font-size="7.5" font-weight="600" letter-spacing="3" fill="#ca8a04">
+      © 2021 CARTOGRAPHIC DISCOVERY ARCHIVES • ALL RIGHTS RESERVED
+    </text>
+  </g>
+</svg>

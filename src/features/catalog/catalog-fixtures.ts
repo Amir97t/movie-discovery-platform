@@ -14,6 +14,7 @@ export interface FixtureMovie {
   runtimeMinutes: number | null;
   genres: GenreKey[];
   synopsis?: { en: string; fa: string };
+  posterUrl?: string;
   art: readonly [string, string];
 }
 
@@ -83,6 +84,7 @@ export const FIXTURE_MOVIES: readonly FixtureMovie[] = [
       en: "A silent archivist uncovers lost nitrate reels documenting the forgotten pioneers of early natural history cinema.",
       fa: "یک بایگانی‌دار خاموش حلقه‌های نیترات گمشده‌ای را کشف می‌کند که پیشگامان فراموش‌شده‌ی سینمای مستند حیات‌وحش را ثبت کرده‌اند.",
     },
+    posterUrl: "/fixtures/posters/quiet-reel.svg",
     art: ["#22301f", "#7fa05a"],
   },
   {
@@ -193,6 +195,7 @@ export const FIXTURE_MOVIES: readonly FixtureMovie[] = [
       en: "A comprehensive expedition tracing the solitary surveyor who mapped the uncharted coastlines before satellite telemetry.",
       fa: "اکتشافی همه‌جانبه در ردیابی نقشه‌بردار تنهایی که خطوط ساحلی ناشناخته را پیش از دورسنجی ماهواره‌ای نقشه‌برداری کرد.",
     },
+    posterUrl: "/fixtures/posters/silent-cartographer.svg",
     art: ["#14532d", "#4ade80"],
   },
   {

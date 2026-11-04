@@ -396,38 +396,50 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
         {/* Carousel Navigation Controls (only if multiple slides exist) */}
         {slides.length > 1 && (
           <>
-            {/* 1. Previous Slide Edge Arrow (Logical start, vertically centered) */}
+            {/* 1. Previous Slide Edge Arrow (Logical start, vertically centered, visible across all viewports with >=44px hit target) */}
             <button
               type="button"
               onClick={goToPrev}
               aria-label={t("carouselPrev")}
               className={cn(
-                "absolute start-4 lg:start-6 top-1/2 -translate-y-1/2 z-20",
-                "hidden lg:flex size-11 items-center justify-center rounded-full",
-                "border border-line/60 bg-surface/60 text-fg shadow-lg backdrop-blur-md",
-                "opacity-75 group-hover:opacity-100 hover:!opacity-100 hover:bg-surface/90 hover:scale-105",
-                "transition-all duration-200",
-                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                "group/btn absolute start-2 sm:start-4 lg:start-6 top-1/2 -translate-y-1/2 z-20",
+                "flex size-11 items-center justify-center touch-manipulation rounded-full",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               )}
             >
-              <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+              <span
+                className={cn(
+                  "flex size-9 sm:size-10 lg:size-11 items-center justify-center rounded-full",
+                  "border border-line/60 bg-surface/75 sm:bg-surface/60 text-fg shadow-lg backdrop-blur-md",
+                  "opacity-90 sm:opacity-75 group-hover/btn:!opacity-100 group-hover/btn:bg-surface/90 group-hover/btn:scale-105 active:scale-95",
+                  "transition-all duration-200",
+                )}
+              >
+                <ChevronLeft className="size-4 sm:size-5 rtl:rotate-180" aria-hidden="true" />
+              </span>
             </button>
 
-            {/* 2. Next Slide Edge Arrow (Logical end, vertically centered) */}
+            {/* 2. Next Slide Edge Arrow (Logical end, vertically centered, visible across all viewports with >=44px hit target) */}
             <button
               type="button"
               onClick={goToNext}
               aria-label={t("carouselNext")}
               className={cn(
-                "absolute end-4 lg:end-6 top-1/2 -translate-y-1/2 z-20",
-                "hidden lg:flex size-11 items-center justify-center rounded-full",
-                "border border-line/60 bg-surface/60 text-fg shadow-lg backdrop-blur-md",
-                "opacity-75 group-hover:opacity-100 hover:!opacity-100 hover:bg-surface/90 hover:scale-105",
-                "transition-all duration-200",
-                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                "group/btn absolute end-2 sm:end-4 lg:end-6 top-1/2 -translate-y-1/2 z-20",
+                "flex size-11 items-center justify-center touch-manipulation rounded-full",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               )}
             >
-              <ChevronRight className="size-5 rtl:rotate-180" aria-hidden="true" />
+              <span
+                className={cn(
+                  "flex size-9 sm:size-10 lg:size-11 items-center justify-center rounded-full",
+                  "border border-line/60 bg-surface/75 sm:bg-surface/60 text-fg shadow-lg backdrop-blur-md",
+                  "opacity-90 sm:opacity-75 group-hover/btn:!opacity-100 group-hover/btn:bg-surface/90 group-hover/btn:scale-105 active:scale-95",
+                  "transition-all duration-200",
+                )}
+              >
+                <ChevronRight className="size-4 sm:size-5 rtl:rotate-180" aria-hidden="true" />
+              </span>
             </button>
 
             {/* 3. Pause / Play Button (Upper logical corner, away from title & CTA) */}
