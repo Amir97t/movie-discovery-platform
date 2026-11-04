@@ -12,6 +12,7 @@ import {
   Heart,
   Landmark,
   Laugh,
+  Loader2,
   Mountain,
   Music,
   Rocket,
@@ -89,6 +90,27 @@ export function GenreSidebar({
 }: GenreSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [prevSelectedGenreKey, setPrevSelectedGenreKey] = useState(selectedGenreKey);
+  const [pendingGenreKey, setPendingGenreKey] = useState<string | null>(null);
+
+  if (prevSelectedGenreKey !== selectedGenreKey) {
+    setPrevSelectedGenreKey(selectedGenreKey);
+    setPendingGenreKey(null);
+  }
+
+  // Safety fallback: if navigation fails, errors, or times out, clear pending state after 8 seconds
+  useEffect(() => {
+    if (!pendingGenreKey) return;
+    const timer = setTimeout(() => {
+      setPendingGenreKey(null);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [pendingGenreKey]);
+
+  const handleSelectGenre = (key: string | null) => {
+    setPendingGenreKey(key);
+    closeDrawer();
+  };
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
@@ -240,6 +262,8 @@ export function GenreSidebar({
     };
   }, [isOpen, checkScroll, genreItems]);
 
+  const isPending = pendingGenreKey !== null && pendingGenreKey !== (selectedGenreKey ?? null);
+  const pendingItem = isPending ? genreItems.find((item) => item.key === pendingGenreKey) : null;
   const selectedItem = genreItems.find((item) => item.key === selectedGenreKey);
   const titleId = ariaLabelledBy || "genre-drawer-title";
   const drawerId = "genre-drawer";
@@ -263,13 +287,21 @@ export function GenreSidebar({
         data-testid="genre-filter-trigger"
         className="group inline-flex items-center gap-2.5 rounded-xl border border-line-strong/30 bg-surface/85 backdrop-blur-md px-3.5 py-2 text-sm font-medium text-fg shadow-sm hover:border-accent/50 hover:bg-surface-raised/80 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <SlidersHorizontal className="size-4 text-accent transition-transform group-hover:scale-110" aria-hidden="true" />
+        {isPending ? (
+          <Loader2 className="size-4 text-accent animate-spin" aria-hidden="true" />
+        ) : (
+          <SlidersHorizontal className="size-4 text-accent transition-transform group-hover:scale-110" aria-hidden="true" />
+        )}
         <span>{filterButtonLabel}</span>
-        {selectedItem && (
+        {isPending && pendingItem ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 border border-accent/40 px-2 py-0.5 text-xs font-semibold text-accent-text animate-pulse">
+            {pendingItem.label}
+          </span>
+        ) : selectedItem ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-xs font-semibold text-accent-text">
             {selectedItem.label}
           </span>
-        )}
+        ) : null}
       </button>
 
       {/* Edge Drawer Dialog & Backdrop (Unified for all viewports) */}
@@ -325,7 +357,7 @@ export function GenreSidebar({
                   <li key="all" className="mb-2 pb-2 border-b border-line/30">
                     <Link
                       href={allHref}
-                      onClick={closeDrawer}
+                      onClick={() => handleSelectGenre(null)}
                       aria-current={!selectedGenreKey ? "page" : undefined}
                       className={cn(
                         "group relative flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",
@@ -361,7 +393,7 @@ export function GenreSidebar({
                       <li key={item.key}>
                         <Link
                           href={item.href}
-                          onClick={closeDrawer}
+                          onClick={() => handleSelectGenre(item.key)}
                           aria-current={isSelected ? "page" : undefined}
                           className={cn(
                             "group relative flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-accent",

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { vi, describe, expect, it, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 
 vi.mock("@/i18n/navigation", () => ({
   Link: ({
@@ -240,5 +240,105 @@ describe("GenreSidebar component", () => {
 
     const indicatorFa = screen.getByRole("button", { name: "مشاهده ژانرهای بیشتر" });
     expect(indicatorFa).toBeInTheDocument();
+  });
+
+  it("shows immediate pending indicator on trigger button when selecting a new genre", () => {
+    const { rerender } = render(<GenreSidebar {...defaultProps} selectedGenreKey="action" />);
+
+    // Open drawer
+    fireEvent.click(screen.getByRole("button", { name: /Genres & Filters/i }));
+
+    // Click on Sci-Fi link
+    const scifiLink = screen.getByRole("link", { name: /Sci-Fi/i });
+    fireEvent.click(scifiLink);
+
+    // Drawer closes and trigger shows pending state with animated indicator and target genre label
+    const trigger = screen.getByRole("button", { name: /Genres & Filters/i });
+    expect(trigger).toHaveTextContent("Sci-Fi");
+
+    // Once route completes and selectedGenreKey updates to scifi
+    rerender(<GenreSidebar {...defaultProps} selectedGenreKey="scifi" />);
+    expect(trigger).toHaveTextContent("Sci-Fi");
+  });
+
+  it("clears pending indicator if navigation times out or fails after 8 seconds", () => {
+    vi.useFakeTimers();
+    render(<GenreSidebar {...defaultProps} selectedGenreKey="action" />);
+
+    // Open drawer and click Sci-Fi
+    fireEvent.click(screen.getByRole("button", { name: /Genres & Filters/i }));
+    fireEvent.click(screen.getByRole("link", { name: /Sci-Fi/i }));
+
+    const trigger = screen.getByRole("button", { name: /Genres & Filters/i });
+    expect(trigger).toHaveTextContent("Sci-Fi");
+
+    // Advance timers by 8 seconds (simulating aborted/failed navigation)
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+
+    // Pending state should be cleared, reverting back to active Action genre
+    expect(trigger).toHaveTextContent("Action");
+    vi.useRealTimers();
+  });
+
+  it("handles rapid consecutive selections by resetting the safety timeout", () => {
+    vi.useFakeTimers();
+    render(<GenreSidebar {...defaultProps} selectedGenreKey="action" />);
+
+    // Open drawer and click Sci-Fi
+    fireEvent.click(screen.getByRole("button", { name: /Genres & Filters/i }));
+    fireEvent.click(screen.getByRole("link", { name: /Sci-Fi/i }));
+
+    const trigger = screen.getByRole("button", { name: /Genres & Filters/i });
+    expect(trigger).toHaveTextContent("Sci-Fi");
+
+    // Advance 5 seconds
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    // Still pending Sci-Fi
+    expect(trigger).toHaveTextContent("Sci-Fi");
+
+    // Rapid selection: open drawer and click Comedy
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("link", { name: /Comedy/i }));
+    expect(trigger).toHaveTextContent("Comedy");
+
+    // Advance 4 more seconds (total 9s since first click, but only 4s since Comedy click)
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    // First timer did NOT clear Comedy because it was reset
+    expect(trigger).toHaveTextContent("Comedy");
+
+    // Advance 4 more seconds (8s since Comedy click)
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    // Now Comedy times out and reverts to Action
+    expect(trigger).toHaveTextContent("Action");
+
+    vi.useRealTimers();
+  });
+
+  it("cleans up active timer on unmount without throwing errors", () => {
+    vi.useFakeTimers();
+    const { unmount } = render(<GenreSidebar {...defaultProps} selectedGenreKey="action" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Genres & Filters/i }));
+    fireEvent.click(screen.getByRole("link", { name: /Sci-Fi/i }));
+
+    // Unmount while timer is pending
+    unmount();
+
+    // Advance timers after unmount
+    expect(() => {
+      act(() => {
+        vi.advanceTimersByTime(8000);
+      });
+    }).not.toThrow();
+
+    vi.useRealTimers();
   });
 });

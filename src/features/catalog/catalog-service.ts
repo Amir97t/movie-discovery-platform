@@ -346,6 +346,24 @@ export async function getMovieByIdDirect(id: string): Promise<Movie> {
   return movie;
 }
 
+/**
+ * Resolves movie detail by ID with support for localized local fixture records.
+ * 1. Checks FIXTURE_MOVIES by exact ID match first. If found, returns localized fixtureToMovie without hitting external API.
+ * 2. If ID is not a known fixture, delegates directly to getMovieByIdDirect(id).
+ * 3. Preserves MovieNotFoundError on upstream 404 for unknown movie IDs.
+ * 4. Preserves network/5xx Error instances for non-404 failures so callers can distinguish not-found from service errors.
+ */
+export async function getMovieDetail(
+  id: string,
+  locale: CatalogLocale = "en",
+): Promise<Movie> {
+  const fixture = FIXTURE_MOVIES.find((f) => f.id === id);
+  if (fixture) {
+    return fixtureToMovie(fixture, locale);
+  }
+  return await getMovieByIdDirect(id);
+}
+
 function parseApiInteger(value: unknown): number | null {
   if (typeof value === "number") {
     return Number.isSafeInteger(value) ? value : null;

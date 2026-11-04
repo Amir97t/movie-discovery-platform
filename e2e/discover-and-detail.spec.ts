@@ -3,7 +3,7 @@
  * internal link navigation, genre filtering, pagination, and image loading.
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Browser } from "@playwright/test";
 
 const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
@@ -69,6 +69,44 @@ test.describe("Movie detail page (live API)", () => {
     await expect(page.locator("text=Something went wrong")).toBeVisible();
     await expect(page.locator("text=The catalog could not be loaded. Please try again later.")).toBeVisible();
     await expect(page.locator("a:has-text('← Back to home')")).toBeVisible();
+  });
+
+  test("renders Documentary fixture movie 'quiet-reel' in English with title and synopsis", async ({ page }) => {
+    await page.goto("/en/movies/quiet-reel");
+    await expect(page.locator("h1")).toHaveText("The Quiet Reel");
+    await expect(page.locator("text=documentary")).toBeVisible();
+    await expect(page.locator("text=A silent archivist uncovers lost nitrate reels")).toBeVisible();
+    await expect(page.locator("a:has-text('← Back to home')")).toBeVisible();
+  });
+
+  test("renders Documentary fixture movie 'quiet-reel' in Persian with title and synopsis in RTL", async ({ page }) => {
+    await page.goto("/fa/movies/quiet-reel");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.locator("h1")).toHaveText("حلقه‌ی خاموش");
+    await expect(page.locator("text=یک بایگانی‌دار خاموش حلقه‌های نیترات گمشده‌ای را کشف می‌کند")).toBeVisible();
+    await expect(page.locator("a:has-text('بازگشت به خانه')")).toBeVisible();
+  });
+
+  test("renders Documentary fixture movie 'silent-cartographer' in English and Persian", async ({ page }) => {
+    await page.goto("/en/movies/silent-cartographer");
+    await expect(page.locator("h1")).toHaveText("The Silent Cartographer");
+    await expect(page.locator("text=A comprehensive expedition tracing the solitary surveyor")).toBeVisible();
+
+    await page.goto("/fa/movies/silent-cartographer");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.locator("h1")).toHaveText("نقشه‌نگار خاموش");
+    await expect(page.locator("text=اکتشافی همه‌جانبه در ردیابی نقشه‌بردار تنهایی")).toBeVisible();
+  });
+
+  test("documentary catalog cards link to valid fixture detail pages instead of 404", async ({ page }) => {
+    await page.goto("/en?genre=documentary&page=1");
+    const quietReelCard = page.locator("a[href*='/movies/quiet-reel']").first();
+    await expect(quietReelCard).toBeVisible();
+    await quietReelCard.click();
+
+    await expect(page).toHaveURL(/\/en\/movies\/quiet-reel/);
+    await expect(page.locator("h1")).toHaveText("The Quiet Reel");
+    await expect(page.locator("text=This page is not on the reel")).not.toBeVisible();
   });
 });
 
@@ -477,6 +515,169 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await expect(page.locator("h1")).toBeVisible();
   });
 
+  test("Hero Carousel desktop layout: edge arrows, top pause, and zero overlap with CTA buttons (getBoundingClientRect)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en");
+
+    const hero = page.locator("section[aria-roledescription='carousel']");
+    await expect(hero).toBeVisible();
+
+    const prevBtn = hero.locator("button[aria-label*='Previous']");
+    const nextBtn = hero.locator("button[aria-label*='Next']");
+    const pauseBtn = hero.locator("button[aria-label*='Pause'], button[aria-label*='Start'], button[aria-label*='Play']");
+    const viewDetailsCta = hero.locator("a:has-text('View details')");
+    const browseCta = hero.locator("a[href*='catalog']");
+
+    await expect(prevBtn).toBeVisible();
+    await expect(nextBtn).toBeVisible();
+    await expect(pauseBtn).toBeVisible();
+    await expect(viewDetailsCta).toBeVisible();
+    await expect(browseCta).toBeVisible();
+
+    const prevBox = await prevBtn.boundingBox();
+    const nextBox = await nextBtn.boundingBox();
+    const pauseBox = await pauseBtn.boundingBox();
+    const viewDetailsBox = await viewDetailsCta.boundingBox();
+    const browseBox = await browseCta.boundingBox();
+
+    expect(prevBox).not.toBeNull();
+    expect(nextBox).not.toBeNull();
+    expect(pauseBox).not.toBeNull();
+    expect(viewDetailsBox).not.toBeNull();
+    expect(browseBox).not.toBeNull();
+
+    // Helper to test if two bounding boxes overlap
+    const boxesOverlap = (
+      b1: { x: number; y: number; width: number; height: number },
+      b2: { x: number; y: number; width: number; height: number },
+    ) => {
+      return !(
+        b1.x + b1.width <= b2.x ||
+        b2.x + b2.width <= b1.x ||
+        b1.y + b1.height <= b2.y ||
+        b2.y + b2.height <= b1.y
+      );
+    };
+
+    // Assert zero overlap between CTA buttons and any carousel controls
+    expect(boxesOverlap(viewDetailsBox!, prevBox!), "View Details does not overlap Prev button").toBe(false);
+    expect(boxesOverlap(viewDetailsBox!, nextBox!), "View Details does not overlap Next button").toBe(false);
+    expect(boxesOverlap(viewDetailsBox!, pauseBox!), "View Details does not overlap Pause button").toBe(false);
+
+    expect(boxesOverlap(browseBox!, prevBox!), "Browse Catalog does not overlap Prev button").toBe(false);
+    expect(boxesOverlap(browseBox!, nextBox!), "Browse Catalog does not overlap Next button").toBe(false);
+    expect(boxesOverlap(browseBox!, pauseBox!), "Browse Catalog does not overlap Pause button").toBe(false);
+
+    // Pause toggles play/pause state
+    await pauseBtn.click();
+    const playBtn = hero.locator("button[aria-label*='Start'], button[aria-label*='Play']");
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
+    await expect(hero.locator("button[aria-label*='Pause']")).toBeVisible();
+  });
+
+  test("Hero Carousel responsive layout: controls hidden and swipe navigation active on tablet/mobile", async ({ page }) => {
+    for (const [w, h, desc] of [
+      [768, 1024, "tablet"],
+      [390, 844, "mobile"],
+    ] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/en");
+
+      const hero = page.locator("section[aria-roledescription='carousel']");
+      await expect(hero).toBeVisible();
+
+      // Carousel controls are visually hidden on tablet and mobile
+      const prevBtn = hero.locator("button[aria-label*='Previous']");
+      const nextBtn = hero.locator("button[aria-label*='Next']");
+      const pauseBtn = hero.locator("button[aria-label*='Pause'], button[aria-label*='Play']");
+
+      await expect(prevBtn, `Prev button hidden on ${desc}`).not.toBeVisible();
+      await expect(nextBtn, `Next button hidden on ${desc}`).not.toBeVisible();
+      await expect(pauseBtn, `Pause button hidden on ${desc}`).not.toBeVisible();
+
+      // Test horizontal swipe navigation on hero
+      const titleLink = hero.locator("h2 a");
+      const initialTitle = (await titleLink.innerText()).trim();
+
+      const heroBox = await hero.boundingBox();
+      expect(heroBox).not.toBeNull();
+
+      // Swipe left: touchstart at 70% width, touchend at 20% width (deltaX ≈ -w * 0.5)
+      const startX = heroBox!.x + heroBox!.width * 0.7;
+      const endX = heroBox!.x + heroBox!.width * 0.2;
+      const centerY = heroBox!.y + heroBox!.height * 0.4;
+
+      await page.evaluate(({ sX, eX, cY }) => {
+        const carousel = document.querySelector("section[aria-roledescription='carousel']");
+        if (!carousel) return;
+        const touch1 = new Touch({ identifier: 1, target: carousel, clientX: sX, clientY: cY });
+        const touch2 = new Touch({ identifier: 1, target: carousel, clientX: eX, clientY: cY });
+        carousel.dispatchEvent(new TouchEvent("touchstart", { touches: [touch1], changedTouches: [touch1], bubbles: true }));
+        carousel.dispatchEvent(new TouchEvent("touchend", { touches: [], changedTouches: [touch2], bubbles: true }));
+      }, { sX: startX, eX: endX, cY: centerY });
+
+      await expect(titleLink).not.toHaveText(initialTitle);
+
+      // Swipe right: touchstart at 20% width, touchend at 70% width
+      await page.evaluate(({ sX, eX, cY }) => {
+        const carousel = document.querySelector("section[aria-roledescription='carousel']");
+        if (!carousel) return;
+        const touch1 = new Touch({ identifier: 1, target: carousel, clientX: sX, clientY: cY });
+        const touch2 = new Touch({ identifier: 1, target: carousel, clientX: eX, clientY: cY });
+        carousel.dispatchEvent(new TouchEvent("touchstart", { touches: [touch1], changedTouches: [touch1], bubbles: true }));
+        carousel.dispatchEvent(new TouchEvent("touchend", { touches: [], changedTouches: [touch2], bubbles: true }));
+      }, { sX: endX, eX: startX, cY: centerY });
+
+      // Returns to initial slide
+      await expect(titleLink).toHaveText(initialTitle);
+    }
+  });
+
+  test("Hero Carousel mobile keyboard accessibility: container receives focus and arrow keys navigate slides in LTR and RTL", async ({ page }) => {
+    // 1. Mobile LTR at 390x844
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/en");
+
+    const hero = page.locator("section[aria-roledescription='carousel']");
+    await expect(hero).toBeVisible();
+
+    // Verify container has tabIndex="0" and can actually receive keyboard focus
+    await expect(hero).toHaveAttribute("tabindex", "0");
+    await hero.focus();
+    await expect(hero).toBeFocused();
+
+    const titleLink = hero.locator("h2 a");
+    const initialTitle = (await titleLink.innerText()).trim();
+
+    // Press ArrowRight to advance in LTR
+    await page.keyboard.press("ArrowRight");
+    await expect(titleLink).not.toHaveText(initialTitle);
+
+    // Press ArrowLeft to return in LTR
+    await page.keyboard.press("ArrowLeft");
+    await expect(titleLink).toHaveText(initialTitle);
+
+    // 2. Mobile RTL at 390x844 on /fa
+    await page.goto("/fa");
+    const heroFa = page.locator("section[aria-roledescription='carousel']");
+    await expect(heroFa).toBeVisible();
+    await expect(heroFa).toHaveAttribute("tabindex", "0");
+    await heroFa.focus();
+    await expect(heroFa).toBeFocused();
+
+    const titleLinkFa = heroFa.locator("h2 a");
+    const initialTitleFa = (await titleLinkFa.innerText()).trim();
+
+    // In RTL, ArrowLeft advances to next slide
+    await page.keyboard.press("ArrowLeft");
+    await expect(titleLinkFa).not.toHaveText(initialTitleFa);
+
+    // In RTL, ArrowRight returns to previous slide
+    await page.keyboard.press("ArrowRight");
+    await expect(titleLinkFa).toHaveText(initialTitleFa);
+  });
+
   test("Filter drawer focus trap: initial focus, Tab cycling, Shift+Tab, and Escape on desktop and mobile", async ({ page }) => {
     for (const [w, h] of [
       [1440, 900],
@@ -565,6 +766,7 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     const drawer = page.locator("#genre-drawer");
     const backdrop = page.getByTestId("genre-drawer-backdrop");
     await expect(drawer).toBeVisible();
+    await page.waitForTimeout(250);
 
     // Check exact 224px width and left edge alignment (LTR)
     const boxDesktop = await drawer.boundingBox();
@@ -594,6 +796,7 @@ test.describe("Phase 2 Catalog, 15-item grid, Hero Carousel and Mobile Drawer", 
     await page.getByTestId("genre-filter-trigger").click();
     const drawerRtl = page.locator("#genre-drawer");
     await expect(drawerRtl).toBeVisible();
+    await page.waitForTimeout(250);
 
     const boxRtl = await drawerRtl.boundingBox();
     expect(boxRtl).not.toBeNull();
@@ -864,10 +1067,7 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
     }
   });
 
-  test("Captures Phase 4.2 visual screenshots and measures layout widths", async ({ browser }) => {
-    test.setTimeout(120000);
-
-    // 1. Generate deterministic visual artwork buffers for screenshot capture
+  async function createVisualArtworkMocker(browser: Browser) {
     const artPage = await browser.newPage({ viewport: { width: 400, height: 600 } });
     await artPage.setContent(`
       <style>
@@ -1016,8 +1216,7 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
     await artPage.close();
     await bdPage.close();
 
-    // 2. Mock image responses using real remote fetch or deterministic rich test artwork
-    const mockVisualArtwork = async (p: Page) => {
+    return async (p: Page) => {
       await p.route("**/_next/image*", async (route) => {
         const reqUrl = route.request().url();
         const isBackdrop = reqUrl.includes("backdrop") || reqUrl.includes("header") || reqUrl.includes("hero");
@@ -1048,6 +1247,11 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
         });
       });
     };
+  }
+
+  test("Captures Phase 4.2 visual screenshots and measures layout widths", async ({ browser }) => {
+    test.setTimeout(120000);
+    const mockVisualArtwork = await createVisualArtworkMocker(browser);
 
     // 1. Home — English, desktop, Dark (1440x900)
     {
@@ -1299,5 +1503,79 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       );
     }
     await layoutContext.close();
+  });
+
+  test("Captures Phase 4.4 Hero Carousel screenshots", async ({ browser }) => {
+    test.setTimeout(120000);
+    const mockVisualArtwork = await createVisualArtworkMocker(browser);
+    // 1. English Desktop (1440x900)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+      await page.goto("/en");
+      await page.waitForLoadState("domcontentloaded");
+      const hero = page.locator("section[aria-roledescription='carousel']");
+      await expect(hero).toBeVisible();
+      await expect(hero.locator("button[aria-label*='Previous']")).toBeVisible();
+      await page.screenshot({ path: "screenshots/hero-desktop-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // 2. Persian Desktop (1440x900 RTL)
+    {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+      await page.goto("/fa");
+      await page.waitForLoadState("domcontentloaded");
+      const hero = page.locator("section[aria-roledescription='carousel']");
+      await expect(hero).toBeVisible();
+      await expect(hero.locator("button[aria-label*='قبلی']")).toBeVisible();
+      await page.screenshot({ path: "screenshots/hero-desktop-fa-1440.png", fullPage: false });
+      await context.close();
+    }
+
+    // 3. English Tablet (768x1024)
+    {
+      const context = await browser.newContext({ viewport: { width: 768, height: 1024 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+      await page.goto("/en");
+      await page.waitForLoadState("domcontentloaded");
+      const hero = page.locator("section[aria-roledescription='carousel']");
+      await expect(hero).toBeVisible();
+      await page.screenshot({ path: "screenshots/hero-tablet-768.png", fullPage: false });
+      await context.close();
+    }
+
+    // 4. English Mobile (390x844)
+    {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      await mockVisualArtwork(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+        document.documentElement.dataset.mode = "dark";
+      });
+      await page.goto("/en");
+      await page.waitForLoadState("domcontentloaded");
+      const hero = page.locator("section[aria-roledescription='carousel']");
+      await expect(hero).toBeVisible();
+      await page.screenshot({ path: "screenshots/hero-mobile-390.png", fullPage: false });
+      await context.close();
+    }
   });
 });

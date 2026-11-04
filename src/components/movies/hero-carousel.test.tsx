@@ -361,4 +361,134 @@ describe("HeroCarousel", () => {
       expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
     });
   });
+
+  describe("Touch and swipe navigation", () => {
+    it("advances to next slide on swipe left (deltaX < -45)", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+      const carousel = screen.getByRole("region", { name: "Featured movie carousel" });
+
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      fireEvent.touchStart(carousel, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchEnd(carousel, {
+        changedTouches: [{ clientX: 140, clientY: 100 }],
+      });
+
+      expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Go to slide 2" })).toHaveAttribute("aria-selected", "true");
+    });
+
+    it("returns to previous slide on swipe right (deltaX > 45)", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+      const carousel = screen.getByRole("region", { name: "Featured movie carousel" });
+
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      // Swipe right wraps to last slide (Movie Three)
+      fireEvent.touchStart(carousel, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(carousel, {
+        changedTouches: [{ clientX: 160, clientY: 100 }],
+      });
+
+      expect(screen.getByRole("heading", { level: 2, name: "Movie Three" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Go to slide 3" })).toHaveAttribute("aria-selected", "true");
+    });
+
+    it("ignores swipe gestures when vertical movement dominates (page scroll)", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+      const carousel = screen.getByRole("region", { name: "Featured movie carousel" });
+
+      // Moving deltaX = -50, but deltaY = 120 (vertical scroll)
+      fireEvent.touchStart(carousel, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchEnd(carousel, {
+        changedTouches: [{ clientX: 150, clientY: 220 }],
+      });
+
+      // Still on slide 1
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+    });
+
+    it("ignores swipe gestures that originate on interactive links or buttons", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+      const link = screen.getByRole("link", { name: "View Details" });
+
+      fireEvent.touchStart(link, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchEnd(link, {
+        changedTouches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Still on slide 1
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+    });
+  });
+
+  describe("Breakpoint-aware layout and auto-rotation", () => {
+    it("positions Previous and Next at opposite logical edges with vertical centering", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+
+      const prevBtn = screen.getByRole("button", { name: "Previous slide" });
+      const nextBtn = screen.getByRole("button", { name: "Next slide" });
+      const pauseBtn = screen.getByRole("button", { name: "Pause carousel" });
+
+      expect(prevBtn).toHaveClass("start-4", "lg:start-6", "top-1/2", "-translate-y-1/2");
+      expect(nextBtn).toHaveClass("end-4", "lg:end-6", "top-1/2", "-translate-y-1/2");
+      expect(pauseBtn).toHaveClass("top-4", "end-4", "sm:top-6", "sm:end-6");
+    });
+
+    it("disables automatic rotation when viewport is below desktop breakpoint (lg)", () => {
+      // Mock matchMedia returning false for min-width: 1024px
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(min-width: 1024px)" ? false : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      render(<HeroCarousel candidates={mockCandidates} />);
+
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(7000);
+      });
+
+      // Should remain on slide 1 because auto-rotation is disabled below lg
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+    });
+
+    it("supports keyboard arrow navigation on carousel region and does not intercept on interactive children", () => {
+      render(<HeroCarousel candidates={mockCandidates} />);
+      const carousel = screen.getByRole("region", { name: "Featured movie carousel" });
+
+      expect(carousel).toHaveAttribute("tabindex", "0");
+      expect(carousel).toHaveAttribute("aria-roledescription", "carousel");
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      // Press ArrowRight directly on carousel to advance
+      fireEvent.keyDown(carousel, { key: "ArrowRight" });
+      expect(screen.getByRole("heading", { level: 2, name: "Movie Two" })).toBeInTheDocument();
+
+      // Press ArrowLeft to return
+      fireEvent.keyDown(carousel, { key: "ArrowLeft" });
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+
+      // When an interactive link inside the carousel receives arrow keys, it is NOT intercepted
+      const link = screen.getByRole("link", { name: "View Details" });
+      fireEvent.keyDown(link, { key: "ArrowRight" });
+      // Remains on Movie One because link arrow navigation is preserved
+      expect(screen.getByRole("heading", { level: 2, name: "Movie One" })).toBeInTheDocument();
+    });
+  });
 });

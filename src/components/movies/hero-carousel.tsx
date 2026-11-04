@@ -41,6 +41,19 @@ function getVisibilitySnapshot() {
   return document.hidden;
 }
 
+function subscribeDesktop(callback: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
+  const mediaQuery = window.matchMedia("(min-width: 1024px)");
+  mediaQuery.addEventListener?.("change", callback);
+  return () => mediaQuery.removeEventListener?.("change", callback);
+}
+
+function getDesktopSnapshot() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia !== "function") return true;
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
 export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarouselProps) {
   const t = useTranslations("home");
   const tm = useTranslations("movie");
@@ -60,8 +73,13 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
 
   const prefersReducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, () => false);
   const isDocumentHidden = useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, () => false);
+  const isDesktop = useSyncExternalStore(subscribeDesktop, getDesktopSnapshot, () => false);
 
   const plainNumber = new Intl.NumberFormat(locale, { useGrouping: false });
+
+  // Touch & swipe gesture handling for mobile & tablet navigation
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   // Auto-rotation timer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,6 +91,7 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
     }
 
     const shouldRotate =
+      isDesktop &&
       isPlaying &&
       !isHovered &&
       !isFocused &&
@@ -92,7 +111,7 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
         timerRef.current = null;
       }
     };
-  }, [isPlaying, isHovered, isFocused, isDocumentHidden, prefersReducedMotion, slides.length, currentIndex]);
+  }, [isDesktop, isPlaying, isHovered, isFocused, isDocumentHidden, prefersReducedMotion, slides.length, currentIndex]);
 
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
@@ -104,6 +123,85 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
 
   const goToNext = () => {
     setCurrentIndex((prev) => (prev + 1) % slides.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    // Ignore gestures starting on interactive elements (links, buttons, inputs)
+    if (target && target.closest("a, button, [role='button'], input, select, textarea")) {
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      return;
+    }
+    const touch = e.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    // If vertical movement dominates, allow native page scroll
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+
+    const isRtl =
+      typeof document !== "undefined" &&
+      (document.documentElement.lang === "fa" || document.documentElement.dir === "rtl");
+
+    const SWIPE_THRESHOLD = 45;
+    if (deltaX < -SWIPE_THRESHOLD) {
+      if (isRtl) {
+        goToPrev();
+      } else {
+        goToNext();
+      }
+    } else if (deltaX > SWIPE_THRESHOLD) {
+      if (isRtl) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Only handle Arrow keys
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
+      return;
+    }
+    // Do not intercept if focus is on an interactive child element (input, textarea, link, button)
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement ||
+      e.target instanceof HTMLButtonElement ||
+      e.target instanceof HTMLAnchorElement
+    ) {
+      return;
+    }
+    const isRtl =
+      typeof document !== "undefined" &&
+      (document.documentElement.lang === "fa" || document.documentElement.dir === "rtl");
+
+    e.preventDefault();
+    if (e.key === "ArrowLeft") {
+      if (isRtl) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+    } else if (e.key === "ArrowRight") {
+      if (isRtl) {
+        goToPrev();
+      } else {
+        goToNext();
+      }
+    }
   };
 
   if (!slides || slides.length === 0) {
@@ -132,9 +230,10 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
 
   return (
     <section
+      tabIndex={0}
       aria-label={t("carouselRegion")}
       aria-roledescription="carousel"
-      className="group relative isolate overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl transition-all duration-300"
+      className="group relative isolate overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl transition-all duration-300 touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsFocused(true)}
@@ -144,6 +243,9 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
           setIsFocused(false);
         }
       }}
+      onKeyDown={handleKeyDown}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Background Slides */}
       <div className="relative h-[24rem] w-full sm:h-[30rem] lg:h-[34rem]">
@@ -293,22 +395,55 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
 
         {/* Carousel Navigation Controls (only if multiple slides exist) */}
         {slides.length > 1 && (
-          <div className="absolute bottom-6 end-6 z-20 flex items-center gap-2 rounded-full border border-line bg-surface/80 p-1.5 shadow-lg backdrop-blur-md">
+          <>
+            {/* 1. Previous Slide Edge Arrow (Logical start, vertically centered) */}
             <button
               type="button"
               onClick={goToPrev}
               aria-label={t("carouselPrev")}
-              className="flex size-8 items-center justify-center rounded-full text-fg hover:bg-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className={cn(
+                "absolute start-4 lg:start-6 top-1/2 -translate-y-1/2 z-20",
+                "hidden lg:flex size-11 items-center justify-center rounded-full",
+                "border border-line/60 bg-surface/60 text-fg shadow-lg backdrop-blur-md",
+                "opacity-75 group-hover:opacity-100 hover:!opacity-100 hover:bg-surface/90 hover:scale-105",
+                "transition-all duration-200",
+                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              )}
             >
-              <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+              <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
             </button>
 
+            {/* 2. Next Slide Edge Arrow (Logical end, vertically centered) */}
+            <button
+              type="button"
+              onClick={goToNext}
+              aria-label={t("carouselNext")}
+              className={cn(
+                "absolute end-4 lg:end-6 top-1/2 -translate-y-1/2 z-20",
+                "hidden lg:flex size-11 items-center justify-center rounded-full",
+                "border border-line/60 bg-surface/60 text-fg shadow-lg backdrop-blur-md",
+                "opacity-75 group-hover:opacity-100 hover:!opacity-100 hover:bg-surface/90 hover:scale-105",
+                "transition-all duration-200",
+                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              )}
+            >
+              <ChevronRight className="size-5 rtl:rotate-180" aria-hidden="true" />
+            </button>
+
+            {/* 3. Pause / Play Button (Upper logical corner, away from title & CTA) */}
             <button
               type="button"
               onClick={() => setIsPlaying((p) => !p)}
               aria-label={isPlaying ? t("carouselPause") : t("carouselPlay")}
               aria-pressed={!isPlaying}
-              className="flex size-8 items-center justify-center rounded-full text-fg hover:bg-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className={cn(
+                "absolute top-4 end-4 sm:top-6 sm:end-6 z-20",
+                "hidden lg:flex size-9 items-center justify-center rounded-full",
+                "border border-line/60 bg-surface/60 text-fg shadow-md backdrop-blur-md",
+                "opacity-75 group-hover:opacity-100 hover:!opacity-100 hover:bg-surface/90 hover:scale-105",
+                "transition-all duration-200",
+                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              )}
             >
               {isPlaying ? (
                 <Pause className="size-3.5" aria-hidden="true" />
@@ -317,38 +452,35 @@ export function HeroCarousel({ candidates, kicker, locale = "en" }: HeroCarousel
               )}
             </button>
 
-            {/* Slide Indicator Dots */}
-            <div className="flex items-center gap-1.5 px-1.5" role="tablist" aria-label={t("carouselRegion")}>
-              {slides.map((slide, idx) => {
-                const isCurrent = idx === currentIndex;
-                return (
-                  <button
-                    key={slide.id}
-                    type="button"
-                    role="tab"
-                    onClick={() => goToSlide(idx)}
-                    aria-label={t("carouselSlide", { number: idx + 1 })}
-                    aria-selected={isCurrent}
-                    className={cn(
-                      "h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                      isCurrent
-                        ? "w-6 bg-accent"
-                        : "w-2 bg-muted/40 hover:bg-muted/70",
-                    )}
-                  />
-                );
-              })}
+            {/* 4. Slide Indicator Dots (Centered at bottom, visible on lg, hidden below lg) */}
+            <div className="absolute bottom-4 inset-x-0 z-20 hidden lg:flex justify-center pointer-events-none">
+              <div
+                className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-line/40 bg-surface/50 px-3 py-1.5 backdrop-blur-md"
+                role="tablist"
+                aria-label={t("carouselRegion")}
+              >
+                {slides.map((slide, idx) => {
+                  const isCurrent = idx === currentIndex;
+                  return (
+                    <button
+                      key={slide.id}
+                      type="button"
+                      role="tab"
+                      onClick={() => goToSlide(idx)}
+                      aria-label={t("carouselSlide", { number: idx + 1 })}
+                      aria-selected={isCurrent}
+                      className={cn(
+                        "h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                        isCurrent
+                          ? "w-6 bg-accent"
+                          : "w-2 bg-muted/40 hover:bg-muted/70",
+                      )}
+                    />
+                  );
+                })}
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={goToNext}
-              aria-label={t("carouselNext")}
-              className="flex size-8 items-center justify-center rounded-full text-fg hover:bg-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <ChevronRight className="size-4 rtl:rotate-180" aria-hidden="true" />
-            </button>
-          </div>
+          </>
         )}
       </div>
     </section>

@@ -13,6 +13,7 @@ import {
   getHomeCatalog,
   getMovieById,
   getMovieByIdDirect,
+  getMovieDetail,
   getMoviesByGenre,
   getMoviesByPage,
   getMoviesBySearch,
@@ -627,6 +628,91 @@ describe("getMovieByIdDirect", () => {
     expect(movie.genres).toContain("action");
     expect(movie.genres).toContain("drama");
     expect(movie.synopsis).toBe("A test movie plot.");
+  });
+});
+
+describe("getMovieDetail", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns localized fixture movie for quiet-reel in English without external fetch", async () => {
+    const fetchMock = vi.mocked(fetch);
+    const movie = await getMovieDetail("quiet-reel", "en");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(movie.id).toBe("quiet-reel");
+    expect(movie.title).toBe("The Quiet Reel");
+    expect(movie.synopsis).toBe(
+      "A silent archivist uncovers lost nitrate reels documenting the forgotten pioneers of early natural history cinema.",
+    );
+    expect(movie.genres).toContain("documentary");
+  });
+
+  it("returns localized fixture movie for quiet-reel in Persian without external fetch", async () => {
+    const fetchMock = vi.mocked(fetch);
+    const movie = await getMovieDetail("quiet-reel", "fa");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(movie.id).toBe("quiet-reel");
+    expect(movie.title).toBe("حلقه‌ی خاموش");
+    expect(movie.synopsis).toBe(
+      "یک بایگانی‌دار خاموش حلقه‌های نیترات گمشده‌ای را کشف می‌کند که پیشگامان فراموش‌شده‌ی سینمای مستند حیات‌وحش را ثبت کرده‌اند.",
+    );
+    expect(movie.genres).toContain("documentary");
+  });
+
+  it("returns localized fixture movie for silent-cartographer in English and Persian", async () => {
+    const fetchMock = vi.mocked(fetch);
+    const movieEn = await getMovieDetail("silent-cartographer", "en");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(movieEn.title).toBe("The Silent Cartographer");
+    expect(movieEn.synopsis).toBe(
+      "A comprehensive expedition tracing the solitary surveyor who mapped the uncharted coastlines before satellite telemetry.",
+    );
+
+    const movieFa = await getMovieDetail("silent-cartographer", "fa");
+    expect(movieFa.title).toBe("نقشه‌نگار خاموش");
+    expect(movieFa.synopsis).toBe(
+      "اکتشافی همه‌جانبه در ردیابی نقشه‌بردار تنهایی که خطوط ساحلی ناشناخته را پیش از دورسنجی ماهواره‌ای نقشه‌برداری کرد.",
+    );
+  });
+
+  it("delegates to getMovieByIdDirect for numeric API IDs", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockMovieResponse(mockMovie));
+
+    const movie = await getMovieDetail("1", "en");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://moviesapi.codingfront.dev/api/v1/movies/1",
+      expect.anything(),
+    );
+    expect(movie.id).toBe("1");
+    expect(movie.title).toBe("Test Movie");
+  });
+
+  it("throws MovieNotFoundError when an unknown ID returns HTTP 404", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockErrorResponse(404));
+
+    await expect(getMovieDetail("unknown-movie-id", "en")).rejects.toBeInstanceOf(MovieNotFoundError);
+  });
+
+  it("re-throws network and 5xx errors without converting them to not-found or fixtures", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(createMockErrorResponse(500));
+
+    await expect(getMovieDetail("1", "en")).rejects.toThrow(Error);
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Network down"));
+    await expect(getMovieDetail("1", "en")).rejects.toThrow(TypeError);
   });
 });
 

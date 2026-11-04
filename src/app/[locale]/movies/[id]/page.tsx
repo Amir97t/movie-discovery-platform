@@ -2,7 +2,7 @@ import { Star, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { getMovieByIdDirect, MovieNotFoundError } from "@/features/catalog/catalog-service";
+import { getMovieDetail, MovieNotFoundError } from "@/features/catalog/catalog-service";
 import { resolveLocale } from "@/i18n/routing";
 import { buttonStyles } from "@/components/ui/button";
 import { MovieBackdrop } from "@/components/movies/movie-backdrop";
@@ -22,7 +22,7 @@ export default async function MovieDetailPage({
 
   let movie;
   try {
-    movie = await getMovieByIdDirect(id);
+    movie = await getMovieDetail(id, locale);
   } catch (error) {
     if (error instanceof MovieNotFoundError) {
       notFound();

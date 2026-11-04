@@ -79,6 +79,10 @@ export const FIXTURE_MOVIES: readonly FixtureMovie[] = [
     rating: 8.4,
     runtimeMinutes: 88,
     genres: ["documentary"],
+    synopsis: {
+      en: "A silent archivist uncovers lost nitrate reels documenting the forgotten pioneers of early natural history cinema.",
+      fa: "یک بایگانی‌دار خاموش حلقه‌های نیترات گمشده‌ای را کشف می‌کند که پیشگامان فراموش‌شده‌ی سینمای مستند حیات‌وحش را ثبت کرده‌اند.",
+    },
     art: ["#22301f", "#7fa05a"],
   },
   {
@@ -185,6 +189,10 @@ export const FIXTURE_MOVIES: readonly FixtureMovie[] = [
     rating: 8.2,
     runtimeMinutes: 99,
     genres: ["documentary", "history"],
+    synopsis: {
+      en: "A comprehensive expedition tracing the solitary surveyor who mapped the uncharted coastlines before satellite telemetry.",
+      fa: "اکتشافی همه‌جانبه در ردیابی نقشه‌بردار تنهایی که خطوط ساحلی ناشناخته را پیش از دورسنجی ماهواره‌ای نقشه‌برداری کرد.",
+    },
     art: ["#14532d", "#4ade80"],
   },
   {
