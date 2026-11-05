@@ -140,7 +140,7 @@ export function LibraryClient({ initialTab = "favorites" }: LibraryClientProps) 
         <div
           role="tablist"
           aria-label={t("title")}
-          className="inline-flex rounded-xl border border-line bg-surface/80 p-1.5 shadow-sm"
+          className="grid w-full grid-cols-3 rounded-xl border border-line bg-surface/80 p-1 sm:inline-flex sm:w-auto sm:p-1.5 shadow-sm"
         >
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -156,29 +156,33 @@ export function LibraryClient({ initialTab = "favorites" }: LibraryClientProps) 
                 data-testid={`library-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "relative flex w-full min-h-[48px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:w-auto sm:min-h-0 sm:flex-row sm:gap-2 sm:px-3.5 sm:py-2",
                   isSelected
-                    ? "bg-accent text-accent-fg shadow-sm"
-                    : "text-muted hover:text-fg hover:bg-surface"
+                    ? "bg-accent font-semibold text-accent-fg shadow-sm"
+                    : "font-medium text-muted hover:bg-surface hover:text-fg"
                 )}
               >
-                <Icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    tab.id === "favorites" && isSelected && "fill-current"
-                  )}
-                />
-                <span>{tab.label}</span>
-                <span
-                  data-testid={`tab-count-${tab.id}`}
-                  className={cn(
-                    "rounded-full px-1.5 py-0.2 text-[11px] font-bold tabular-nums",
-                    isSelected
-                      ? "bg-accent-fg/20 text-accent-fg"
-                      : "bg-surface-elevated text-muted"
-                  )}
-                >
-                  {tab.count}
+                <div className="flex items-center justify-center gap-1 sm:contents">
+                  <Icon
+                    className={cn(
+                      "size-3.5 shrink-0 sm:size-4 sm:order-1",
+                      tab.id === "favorites" && isSelected && "fill-current"
+                    )}
+                  />
+                  <span
+                    data-testid={`tab-count-${tab.id}`}
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px] font-bold tabular-nums sm:order-3 sm:text-[11px]",
+                      isSelected
+                        ? "bg-accent-fg/20 text-accent-fg"
+                        : "bg-surface-elevated text-muted"
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                </div>
+                <span className="text-[11px] leading-tight text-center sm:order-2 sm:text-sm">
+                  {tab.label}
                 </span>
               </button>
             );
@@ -186,8 +190,8 @@ export function LibraryClient({ initialTab = "favorites" }: LibraryClientProps) 
         </div>
 
         {/* Sort Controls */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <label htmlFor="library-sort" className="text-xs font-medium text-muted">
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <label htmlFor="library-sort" className="shrink-0 text-xs font-medium text-muted">
             {t("sortBy")}:
           </label>
           <select
@@ -195,7 +199,7 @@ export function LibraryClient({ initialTab = "favorites" }: LibraryClientProps) 
             data-testid="library-sort-select"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as LibrarySortOption)}
-            className="rounded-lg border border-line bg-surface/80 px-3 py-1.5 text-xs sm:text-sm font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="max-w-[200px] sm:max-w-none rounded-lg border border-line bg-surface/80 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent truncate"
           >
             <option value="recently-updated">{t("sort.recentlyUpdated")}</option>
             <option value="title-asc">{t("sort.titleAsc")}</option>

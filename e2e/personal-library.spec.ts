@@ -316,4 +316,111 @@ test.describe("Personal Library Foundation (Favorites, Watchlist, Watched)", () 
     await expect(page.locator("[data-testid='edit-profile-btn']")).toContainText("ویرایش پروفایل");
     await expect(page.locator("[data-testid='export-backup-btn']")).toContainText("خروجی پشتیبان (JSON)");
   });
+
+  test("Library mobile responsive layout: 3-column tabs, balanced sort, zero overflow across viewports", async ({
+    page,
+  }) => {
+    const viewports = [
+      { width: 360, height: 800, name: "Galaxy S10 (360x800)" },
+      { width: 375, height: 812, name: "iPhone SE/Mini (375x812)" },
+      { width: 390, height: 844, name: "iPhone 13/14 (390x844)" },
+      { width: 412, height: 915, name: "Pixel 7 (412x915)" },
+      { width: 768, height: 1024, name: "iPad/Tablet (768x1024)" },
+      { width: 1280, height: 800, name: "Desktop (1280x800)" },
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+
+      // Test English LTR
+      await page.goto("/en/library", { waitUntil: "domcontentloaded" });
+
+      const container = page.locator("[data-testid='library-container']");
+      await expect(container).toBeVisible();
+
+      const tablist = page.locator("div[role='tablist']");
+      await expect(tablist).toBeVisible();
+
+      const favTab = page.locator("[data-testid='library-tab-favorites']");
+      const watchTab = page.locator("[data-testid='library-tab-watchlist']");
+      const watchedTab = page.locator("[data-testid='library-tab-watched']");
+
+      await expect(favTab).toBeVisible();
+      await expect(watchTab).toBeVisible();
+      await expect(watchedTab).toBeVisible();
+
+      const favBox = await favTab.boundingBox();
+      const watchBox = await watchTab.boundingBox();
+      const watchedBox = await watchedTab.boundingBox();
+      const tablistBox = await tablist.boundingBox();
+
+      expect(favBox).not.toBeNull();
+      expect(watchBox).not.toBeNull();
+      expect(watchedBox).not.toBeNull();
+      expect(tablistBox).not.toBeNull();
+
+      // On mobile viewports (< 640px), tabs occupy 3 equal columns within 4px subpixel tolerance
+      if (vp.width < 640) {
+        expect(Math.abs(favBox!.width - watchBox!.width)).toBeLessThanOrEqual(4);
+        expect(Math.abs(watchBox!.width - watchedBox!.width)).toBeLessThanOrEqual(4);
+        // Tabs must have sufficient height for touch targets
+        expect(favBox!.height).toBeGreaterThanOrEqual(44);
+        expect(watchBox!.height).toBeGreaterThanOrEqual(44);
+        expect(watchedBox!.height).toBeGreaterThanOrEqual(44);
+      }
+
+      // Check sorting control
+      const sortSelect = page.locator("[data-testid='library-sort-select']");
+      await expect(sortSelect).toBeVisible();
+      const sortBox = await sortSelect.boundingBox();
+      expect(sortBox).not.toBeNull();
+      expect(sortBox!.x + sortBox!.width).toBeLessThanOrEqual(vp.width);
+
+      // Verify zero horizontal page overflow
+      const hasOverflowEn = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasOverflowEn).toBe(false);
+
+      if (vp.width === 360) {
+        await page.screenshot({ path: "screenshots/library-mobile-360-en.png" });
+      }
+
+      // Test Persian RTL
+      await page.goto("/fa/library", { waitUntil: "domcontentloaded" });
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+      const faFavTab = page.locator("[data-testid='library-tab-favorites']");
+      const faWatchTab = page.locator("[data-testid='library-tab-watchlist']");
+      const faWatchedTab = page.locator("[data-testid='library-tab-watched']");
+
+      await expect(faFavTab).toContainText("علاقه‌مندی‌ها");
+      await expect(faWatchTab).toContainText("لیست تماشا");
+      await expect(faWatchedTab).toContainText("تماشا شده");
+
+      const faFavBox = await faFavTab.boundingBox();
+      const faWatchBox = await faWatchTab.boundingBox();
+      const faWatchedBox = await faWatchedTab.boundingBox();
+
+      expect(faFavBox).not.toBeNull();
+      expect(faWatchBox).not.toBeNull();
+      expect(faWatchedBox).not.toBeNull();
+
+      if (vp.width < 640) {
+        expect(Math.abs(faFavBox!.width - faWatchBox!.width)).toBeLessThanOrEqual(4);
+        expect(Math.abs(faWatchBox!.width - faWatchedBox!.width)).toBeLessThanOrEqual(4);
+        expect(faFavBox!.height).toBeGreaterThanOrEqual(44);
+      }
+
+      // Verify zero horizontal overflow in Persian RTL
+      const hasOverflowFa = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasOverflowFa).toBe(false);
+
+      if (vp.width === 360) {
+        await page.screenshot({ path: "screenshots/library-mobile-360-fa.png" });
+      }
+    }
+  });
 });
