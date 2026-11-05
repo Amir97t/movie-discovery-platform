@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Compass, SearchX, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -9,7 +10,25 @@ import { buttonStyles } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getMoviesBySearch } from "@/features/catalog/catalog-service";
 import type { Movie } from "@/features/catalog/catalog-types";
-import { resolveLocale } from "@/i18n/routing";
+import { resolveLocale, routing } from "@/i18n/routing";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = resolveLocale(rawLocale) ?? routing.defaultLocale;
+  const { q } = await searchParams;
+  const t = await getTranslations({ locale, namespace: "search" });
+  const title = q && q.trim() ? `${q.trim()} — ${t("title")}` : t("title");
+  return {
+    title,
+    description: t("subtitle"),
+  };
+}
 
 function parsePage(value: string | string[] | undefined): number {
   if (!value) return 1;
@@ -95,6 +114,9 @@ export default async function SearchPage({
       return {
         id: movie.id,
         title: movie.title,
+        year: movie.year,
+        rating: movie.rating,
+        genres: movie.genres,
         metaText: metaFor(movie),
         ratingText,
         ratingLabel: ratingText === null ? "" : tm("ratingValue", { value: ratingText }),

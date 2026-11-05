@@ -15,9 +15,18 @@ vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, params?: { title?: string }) => {
+    if (params?.title) return `${key} ${params.title}`;
+    return key;
+  },
+}));
+
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, beforeEach } from "vitest";
 import { MovieCard } from "./movie-card";
+import { PersonalProvider } from "@/features/personal/personal-context";
+import { resetPersonalStorageCache } from "@/features/personal/personal-storage";
 
 const base = {
   title: "Salt Line",
@@ -28,37 +37,76 @@ const base = {
 };
 
 describe("MovieCard", () => {
+  beforeEach(() => {
+    resetPersonalStorageCache();
+    window.localStorage.clear();
+  });
+
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(<PersonalProvider>{ui}</PersonalProvider>);
+  };
+
   it("shows title, meta and an accessible rating", () => {
-    render(<MovieCard {...base} ratingText="8.1" />);
+    renderWithProvider(<MovieCard {...base} ratingText="8.1" />);
     expect(screen.getByRole("heading", { level: 3, name: "Salt Line" })).toBeInTheDocument();
     expect(screen.getByText("Drama · 2022 · 131 min")).toBeInTheDocument();
     expect(screen.getByText("Rating 8.1 out of 10")).toBeInTheDocument();
   });
 
   it("shows a not-rated label instead of a number when rating is missing", () => {
-    render(<MovieCard {...base} ratingText={null} ratingLabel="" />);
+    renderWithProvider(<MovieCard {...base} ratingText={null} ratingLabel="" />);
     expect(screen.getByText("Not rated")).toBeInTheDocument();
   });
 
   it("keeps the full long title in the DOM (clamping is visual only)", () => {
     const long = "Long Take, Longer Night: The Complete Untold Story of a Single Evening on Platform Nine";
-    render(<MovieCard {...base} title={long} ratingText="6.5" />);
+    renderWithProvider(<MovieCard {...base} title={long} ratingText="6.5" />);
     expect(screen.getByRole("heading", { name: long })).toBeInTheDocument();
   });
 
   it("renders without artwork data", () => {
-    render(<MovieCard {...base} art={null} metaText="" ratingText={null} ratingLabel="" />);
+    renderWithProvider(<MovieCard {...base} art={null} metaText="" ratingText={null} ratingLabel="" />);
     expect(screen.getByRole("heading", { name: "Salt Line" })).toBeInTheDocument();
   });
 
-  it("renders as a link when href is provided", () => {
-    render(<MovieCard {...base} ratingText="8.1" href="/movies/1" />);
-    const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/movies/1");
+  it("renders links for poster and title when href is provided without nesting buttons in links", () => {
+    renderWithProvider(<MovieCard {...base} id="salt-line" ratingText="8.1" href="/movies/salt-line" />);
+    const links = screen.getAllByRole("link");
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    links.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/movies/salt-line");
+      // Assert no button is inside link
+      expect(link.querySelector("button")).toBeNull();
+    });
+  });
+
+  it("renders personal action buttons when id is provided and toggles state", () => {
+    renderWithProvider(<MovieCard {...base} id="salt-line" ratingText="8.1" href="/movies/salt-line" />);
+
+    const favBtn = screen.getByTestId("card-favorite-btn");
+    const watchBtn = screen.getByTestId("card-watchlist-btn");
+    const watchedBtn = screen.getByTestId("card-watched-btn");
+
+    expect(favBtn).toHaveAttribute("aria-pressed", "false");
+    expect(watchBtn).toHaveAttribute("aria-pressed", "false");
+    expect(watchedBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Click favorite button
+    fireEvent.click(favBtn);
+    expect(favBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Click watchlist button
+    fireEvent.click(watchBtn);
+    expect(watchBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Click watched button (should deactivate watchlist)
+    fireEvent.click(watchedBtn);
+    expect(watchedBtn).toHaveAttribute("aria-pressed", "true");
+    expect(watchBtn).toHaveAttribute("aria-pressed", "false");
   });
 
   it("renders as an article when href is not provided", () => {
-    render(<MovieCard {...base} ratingText="8.1" />);
+    renderWithProvider(<MovieCard {...base} ratingText="8.1" />);
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

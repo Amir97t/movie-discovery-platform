@@ -1,12 +1,52 @@
+import type { Metadata } from "next";
 import { Star, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getMovieDetail, MovieNotFoundError } from "@/features/catalog/catalog-service";
-import { resolveLocale } from "@/i18n/routing";
+import { resolveLocale, routing } from "@/i18n/routing";
 import { buttonStyles } from "@/components/ui/button";
 import { MovieBackdrop } from "@/components/movies/movie-backdrop";
+import { DetailPersonalActions } from "@/components/personal/movie-actions";
+import { PersonalRatingSection } from "@/components/personal/personal-rating";
+import { LocalCommentsSection } from "@/components/personal/local-comments";
+import type { MovieSnapshot } from "@/features/personal/personal-types";
 import { EmptyState } from "@/components/ui/empty-state";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale, id } = await params;
+  const locale = resolveLocale(rawLocale) ?? routing.defaultLocale;
+  try {
+    const movie = await getMovieDetail(id, locale);
+    const title = movie.year ? `${movie.title} (${movie.year})` : movie.title;
+    const description = movie.synopsis || movie.director || undefined;
+    const images = movie.posterUrl ? [movie.posterUrl] : movie.backdropUrl ? [movie.backdropUrl] : [];
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        images,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images,
+      },
+    };
+  } catch {
+    const t = await getTranslations({ locale, namespace: "movie" });
+    return {
+      title: t("detailPage"),
+    };
+  }
+}
 
 export default async function MovieDetailPage({
   params,
@@ -44,6 +84,16 @@ export default async function MovieDetailPage({
     );
   }
 
+  const snapshot: MovieSnapshot = {
+    id: movie.id,
+    title: movie.title,
+    year: movie.year,
+    rating: movie.rating,
+    posterUrl: movie.posterUrl,
+    art: movie.art,
+    genres: movie.genres,
+  };
+
   return (
     <div className="page-container space-y-8 pb-16 pt-4 sm:pt-6">
       <nav className="flex items-center gap-2">
@@ -55,6 +105,8 @@ export default async function MovieDetailPage({
       <article className="space-y-8">
         <MovieBackdrop
           backdropUrl={movie.backdropUrl}
+          posterUrl={movie.posterUrl}
+          art={movie.art}
           title={movie.title}
           badge={
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/20 px-3.5 py-1 text-xs font-semibold text-accent-text shadow-sm backdrop-blur-md">
@@ -62,7 +114,9 @@ export default async function MovieDetailPage({
               {t("detailPage")}
             </span>
           }
-        />
+        >
+          <DetailPersonalActions id={movie.id} snapshot={snapshot} />
+        </MovieBackdrop>
 
         {/* Quick Highlights Bar */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -97,6 +151,9 @@ export default async function MovieDetailPage({
             </div>
           )}
         </div>
+
+        {/* Personal Rating Section */}
+        <PersonalRatingSection id={movie.id} snapshot={snapshot} />
 
         {/* Detailed Metadata Grid */}
         <dl className="grid grid-cols-1 gap-6 rounded-2xl border border-line bg-surface/40 p-6 sm:grid-cols-2 sm:p-8">
@@ -135,6 +192,9 @@ export default async function MovieDetailPage({
             <p className="max-w-3xl text-base leading-relaxed text-muted">{movie.synopsis}</p>
           </section>
         )}
+
+        {/* Local Personal Comments & Notes Section */}
+        <LocalCommentsSection id={movie.id} snapshot={snapshot} locale={locale} />
 
         {movie.imdb_id && (
           <section className="space-y-3 border-t border-line pt-6">

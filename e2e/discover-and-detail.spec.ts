@@ -34,7 +34,7 @@ test.describe("Movie detail page (live API)", () => {
 
     // Detail fields from the API should render
     await expect(page.locator("text=drama")).toBeVisible();
-    await expect(page.locator("text=2020")).toBeVisible();
+    await expect(page.locator("dd:has-text('2020')")).toBeVisible();
     await expect(page.locator("text=120 min")).toBeVisible();
     // Director appears as both label (dt) and value (dd) - check the value
     await expect(page.locator("dd:has-text('Director')")).toBeVisible();
@@ -74,6 +74,7 @@ test.describe("Movie detail page (live API)", () => {
   test("renders Documentary fixture movie 'quiet-reel' in English with title and synopsis", async ({ page }) => {
     await page.goto("/en/movies/quiet-reel");
     await expect(page.locator("h1")).toHaveText("The Quiet Reel");
+    await expect(page.locator("[data-testid='movie-detail-poster'] img[src*='quiet-reel.svg']")).toBeVisible();
     await expect(page.locator("text=documentary")).toBeVisible();
     await expect(page.locator("text=A silent archivist uncovers lost nitrate reels")).toBeVisible();
     await expect(page.locator("a:has-text('← Back to home')")).toBeVisible();
@@ -83,6 +84,7 @@ test.describe("Movie detail page (live API)", () => {
     await page.goto("/fa/movies/quiet-reel");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("h1")).toHaveText("حلقه‌ی خاموش");
+    await expect(page.locator("[data-testid='movie-detail-poster'] img[src*='quiet-reel.svg']")).toBeVisible();
     await expect(page.locator("text=یک بایگانی‌دار خاموش حلقه‌های نیترات گمشده‌ای را کشف می‌کند")).toBeVisible();
     await expect(page.locator("a:has-text('بازگشت به خانه')")).toBeVisible();
   });
@@ -90,11 +92,13 @@ test.describe("Movie detail page (live API)", () => {
   test("renders Documentary fixture movie 'silent-cartographer' in English and Persian", async ({ page }) => {
     await page.goto("/en/movies/silent-cartographer");
     await expect(page.locator("h1")).toHaveText("The Silent Cartographer");
+    await expect(page.locator("[data-testid='movie-detail-poster'] img[src*='silent-cartographer.svg']")).toBeVisible();
     await expect(page.locator("text=A comprehensive expedition tracing the solitary surveyor")).toBeVisible();
 
     await page.goto("/fa/movies/silent-cartographer");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("h1")).toHaveText("نقشه‌نگار خاموش");
+    await expect(page.locator("[data-testid='movie-detail-poster'] img[src*='silent-cartographer.svg']")).toBeVisible();
     await expect(page.locator("text=اکتشافی همه‌جانبه در ردیابی نقشه‌بردار تنهایی")).toBeVisible();
   });
 
@@ -240,30 +244,34 @@ test.describe("Internal localized navigation", () => {
     await expect(page).toHaveURL(/\/en\/discover\?page=1/);
   });
 
-  test("desktop navigation links exclude Library and Profile while routes remain accessible directly", async ({ page }) => {
+  test("desktop navigation links include Library and Profile and routes render functional personal pages", async ({ page }) => {
     await page.goto("/en");
     const headerNav = page.locator("header nav");
-    await expect(headerNav.locator("a:has-text('Library')")).not.toBeVisible();
-    await expect(headerNav.locator("a:has-text('Profile')")).not.toBeVisible();
+    await expect(headerNav.locator("a:has-text('Home')")).toBeVisible();
+    await expect(headerNav.locator("a:has-text('Discover')")).toBeVisible();
+    await expect(headerNav.locator("a:has-text('Library')")).toBeVisible();
+    await expect(headerNav.locator("a:has-text('Profile')")).toBeVisible();
 
-    // Direct route visits remain intact for Phase 5
+    // Direct route visits render complete functional components
     await page.goto("/en/library");
     await expect(page).toHaveURL(/\/en\/library$/);
     await expect(page.locator("h1")).toHaveText("Library");
-    await expect(page.locator("text=Library is coming soon")).toBeVisible();
+    await expect(page.locator("[data-testid='library-container']")).toBeVisible();
 
     await page.goto("/en/profile");
     await expect(page).toHaveURL(/\/en\/profile$/);
     await expect(page.locator("h1")).toHaveText("Profile");
-    await expect(page.locator("text=Profile is coming soon")).toBeVisible();
+    await expect(page.locator("[data-testid='profile-container']")).toBeVisible();
 
     await page.goto("/fa/library");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("h1")).toHaveText("کتابخانه");
+    await expect(page.locator("[data-testid='library-container']")).toBeVisible();
 
     await page.goto("/fa/profile");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("h1")).toHaveText("پروفایل");
+    await expect(page.locator("[data-testid='profile-container']")).toBeVisible();
   });
 });
 
@@ -1613,7 +1621,7 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       await expect(heroFa.locator("[data-testid='discover-hero-collage']")).toBeVisible();
     });
 
-    test("Desktop and mobile navigation strictly exclude incomplete Library and Profile links", async ({ page }) => {
+    test("Desktop and mobile navigation include functional Library and Profile links", async ({ page }) => {
       // Desktop viewport (1440px)
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/en");
@@ -1621,20 +1629,20 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       const desktopNav = page.locator("header nav.md\\:block");
       await expect(desktopNav).toBeVisible();
       const desktopLinks = desktopNav.locator("a");
-      await expect(desktopLinks).toHaveCount(2);
+      await expect(desktopLinks).toHaveCount(4);
       await expect(desktopNav.locator("a:has-text('Home')")).toBeVisible();
       await expect(desktopNav.locator("a:has-text('Discover')")).toBeVisible();
-      await expect(desktopNav.locator("a:has-text('Library')")).not.toBeVisible();
-      await expect(desktopNav.locator("a:has-text('Profile')")).not.toBeVisible();
+      await expect(desktopNav.locator("a:has-text('Library')")).toBeVisible();
+      await expect(desktopNav.locator("a:has-text('Profile')")).toBeVisible();
 
       // Persian desktop nav terminology
       await page.goto("/fa");
       const desktopNavFa = page.locator("header nav.md\\:block");
       await expect(desktopNavFa).toBeVisible();
-      await expect(desktopNavFa.locator("a:has-text('خانه')")).toBeVisible();
-      await expect(desktopNavFa.locator("a:has-text('کاوش')")).toBeVisible();
-      await expect(desktopNavFa.locator("a:has-text('کتابخانه')")).not.toBeVisible();
-      await expect(desktopNavFa.locator("a:has-text('پروفایل')")).not.toBeVisible();
+      await expect(desktopNavFa.getByRole("link", { name: "خانه", exact: true })).toBeVisible();
+      await expect(desktopNavFa.getByRole("link", { name: "کاوش", exact: true })).toBeVisible();
+      await expect(desktopNavFa.getByRole("link", { name: "کتابخانه", exact: true })).toBeVisible();
+      await expect(desktopNavFa.getByRole("link", { name: "پروفایل", exact: true })).toBeVisible();
 
       // Mobile viewport (390px)
       await page.setViewportSize({ width: 390, height: 844 });
@@ -1643,11 +1651,11 @@ test.describe("Phase 2.3 Discover UX, Documentary Fallback and Atmosphere", () =
       const mobileNav = page.locator("nav[data-mobile-nav]");
       await expect(mobileNav).toBeVisible();
       const mobileLinks = mobileNav.locator("a");
-      await expect(mobileLinks).toHaveCount(2);
+      await expect(mobileLinks).toHaveCount(4);
       await expect(mobileNav.locator("a:has-text('Home')")).toBeVisible();
       await expect(mobileNav.locator("a:has-text('Discover')")).toBeVisible();
-      await expect(mobileNav.locator("a:has-text('Library')")).not.toBeVisible();
-      await expect(mobileNav.locator("a:has-text('Profile')")).not.toBeVisible();
+      await expect(mobileNav.locator("a:has-text('Library')")).toBeVisible();
+      await expect(mobileNav.locator("a:has-text('Profile')")).toBeVisible();
     });
 
     test("Documentary fixtures load dedicated vector poster artwork without error", async ({ page }) => {

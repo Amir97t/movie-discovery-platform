@@ -13,9 +13,9 @@ export const MOVIE_GRID_CLASSES =
 export function MovieGrid({ items }: { items: MovieGridItem[] }) {
   return (
     <ul className={MOVIE_GRID_CLASSES}>
-      {items.map(({ id, href, ...card }) => (
-        <li key={id} className="min-w-0">
-          <MovieCard {...card} href={href} />
+      {items.map((item) => (
+        <li key={item.id} className="min-w-0">
+          <MovieCard {...item} />
         </li>
       ))}
     </ul>

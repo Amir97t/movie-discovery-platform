@@ -1,10 +1,23 @@
-import { Bookmark, Compass, House } from "lucide-react";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { buttonStyles } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Link } from "@/i18n/navigation";
-import { resolveLocale } from "@/i18n/routing";
+import { LibraryClient } from "@/components/personal/library-client";
+import { resolveLocale, routing } from "@/i18n/routing";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = resolveLocale(rawLocale) ?? routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: "library" });
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+  };
+}
 
 export default async function LibraryPage({
   params,
@@ -21,27 +34,15 @@ export default async function LibraryPage({
   return (
     <div className="page-container space-y-8 pt-4 sm:pt-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">{t("title")}</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-4xl">
+          {t("title")}
+        </h1>
         <p className="text-base text-muted">{t("subtitle")}</p>
       </header>
 
-      <EmptyState
-        icon={<Bookmark className="size-10" />}
-        title={t("comingSoonTitle")}
-        description={t("comingSoonDescription")}
-        action={
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/" className={buttonStyles({ size: "md" })}>
-              <House aria-hidden="true" className="size-4" />
-              {t("backToHome")}
-            </Link>
-            <Link href="/discover" className={buttonStyles({ size: "md", variant: "ghost" })}>
-              <Compass aria-hidden="true" className="size-4" />
-              {t("goToDiscover")}
-            </Link>
-          </div>
-        }
-      />
+      <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-surface/40" />}>
+        <LibraryClient />
+      </Suspense>
     </div>
   );
 }

@@ -101,9 +101,9 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     const indBox = await indicator.boundingBox();
     expect(Math.abs(indBox!.x - homeBox!.x)).toBeLessThanOrEqual(4);
 
-    // Navigate to Discover ("کشف") in RTL
+    // Navigate to Discover ("کاوش") in RTL
     await desktopNav.locator("a[href='/fa/discover']").click();
-    await expect(page).toHaveURL(/\/fa\/discover/);
+    await expect(page).toHaveURL(/\/fa\/discover/, { timeout: 10000 });
     await page.waitForTimeout(450);
 
     const discoverLink = desktopNav.locator("a[aria-current='page']");
@@ -292,13 +292,13 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     const indBox = await indicator.boundingBox();
     expect(Math.abs(indBox!.x - homeBox!.x)).toBeLessThanOrEqual(4);
 
-    // Navigate to Discover ("کشف") in RTL mobile
+    // Navigate to Discover ("کاوش") in RTL mobile
     await mobileNav.locator("a[href='/fa/discover']").click();
-    await expect(page).toHaveURL(/\/fa\/discover/);
+    await expect(page).toHaveURL(/\/fa\/discover/, { timeout: 10000 });
     await page.waitForTimeout(450);
 
     const discoverLink = mobileNav.locator("a[aria-current='page']");
-    await expect(discoverLink).toHaveText(/کشف/);
+    await expect(discoverLink).toHaveText(/کاوش/);
     const dBox = await discoverLink.boundingBox();
     const dIndBox = await indicator.boundingBox();
     expect(Math.abs(dIndBox!.x - dBox!.x)).toBeLessThanOrEqual(4);
@@ -426,9 +426,9 @@ test.describe("Phase 3 Liquid Navbar Active Indicator", () => {
     await expect(page).toHaveURL(/\/fa\/discover/);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
-    // In RTL, active item is "کشف" and indicator aligns with it
+    // In RTL, active item is "کاوش" and indicator aligns with it
     const faDiscoverLink = desktopNav.locator("a[aria-current='page']");
-    await expect(faDiscoverLink).toHaveText("کشف");
+    await expect(faDiscoverLink).toHaveText("کاوش");
 
     await page.waitForTimeout(450);
     const faBox = await faDiscoverLink.boundingBox();

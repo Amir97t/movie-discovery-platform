@@ -118,6 +118,9 @@ export default async function HomePage({
       return {
         id: movie.id,
         title: movie.title,
+        year: movie.year,
+        rating: movie.rating,
+        genres: movie.genres,
         metaText: metaFor(movie),
         ratingText,
         ratingLabel: ratingText === null ? "" : tm("ratingValue", { value: ratingText }),

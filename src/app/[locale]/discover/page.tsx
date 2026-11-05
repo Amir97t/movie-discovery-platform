@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SearchX, TriangleAlert } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -15,7 +16,21 @@ import {
   MovieNotFoundError,
 } from "@/features/catalog/catalog-service";
 import { GENRE_KEYS, type GenreKey, type Movie } from "@/features/catalog/catalog-types";
-import { resolveLocale } from "@/i18n/routing";
+import { resolveLocale, routing } from "@/i18n/routing";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = resolveLocale(rawLocale) ?? routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: "discover" });
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+  };
+}
 
 function parsePage(value: string | string[] | undefined): number {
   if (!value) return 1;
@@ -126,6 +141,9 @@ export default async function DiscoverPage({
       return {
         id: movie.id,
         title: movie.title,
+        year: movie.year,
+        rating: movie.rating,
+        genres: movie.genres,
         metaText: metaFor(movie),
         ratingText,
         ratingLabel: ratingText === null ? "" : tm("ratingValue", { value: ratingText }),

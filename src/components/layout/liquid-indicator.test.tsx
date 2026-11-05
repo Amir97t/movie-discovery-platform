@@ -283,7 +283,7 @@ describe("DesktopNav and MobileNavigation components", () => {
     mockPathname = "/";
   });
 
-  it("renders DesktopNav with aria-current='page' only on active link and renders liquid indicator", () => {
+  it("renders DesktopNav with aria-current='page' only on active link and renders all 4 navigation links", () => {
     render(<DesktopNav />);
     const activeLink = screen.getByRole("link", { name: "Home" });
     expect(activeLink.getAttribute("aria-current")).toBe("page");
@@ -291,23 +291,29 @@ describe("DesktopNav and MobileNavigation components", () => {
     const discoverLink = screen.getByRole("link", { name: "Discover" });
     expect(discoverLink.getAttribute("aria-current")).toBeNull();
 
-    expect(screen.queryByRole("link", { name: "Library" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Profile" })).toBeNull();
+    const libraryLink = screen.getByRole("link", { name: "Library" });
+    expect(libraryLink.getAttribute("aria-current")).toBeNull();
+
+    const profileLink = screen.getByRole("link", { name: "Profile" });
+    expect(profileLink.getAttribute("aria-current")).toBeNull();
+
     const links = screen.getAllByRole("link");
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(4);
   });
 
-  it("renders MobileNavigation with aria-current='page' on active link and renders 2 items without incomplete routes", () => {
+  it("renders MobileNavigation with aria-current='page' on active link and renders 4 items in balanced 4-column layout", () => {
     const { container } = render(<MobileNavigation />);
     const activeLink = screen.getByRole("link", { name: "Home" });
     expect(activeLink.getAttribute("aria-current")).toBe("page");
 
     const links = screen.getAllByRole("link");
-    expect(links.length).toBe(2);
-    expect(screen.queryByRole("link", { name: "Library" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Profile" })).toBeNull();
+    expect(links.length).toBe(4);
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Discover" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Profile" })).toBeInTheDocument();
 
     const list = container.querySelector("ul");
-    expect(list?.className).toContain("grid-cols-2");
+    expect(list?.className).toContain("grid-cols-4");
   });
 });
