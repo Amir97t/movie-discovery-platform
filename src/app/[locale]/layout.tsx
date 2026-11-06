@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { PersonalProvider } from "@/features/personal/personal-context";
 import { getDirection, resolveLocale, routing } from "@/i18n/routing";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "@/styles/globals.css";
@@ -29,8 +30,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f5ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#101114" },
+    { media: "(prefers-color-scheme: light)", color: "#F3EFEB" },
+    { media: "(prefers-color-scheme: dark)", color: "#111318" },
   ],
 };
 
@@ -39,9 +40,35 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
-  const { locale } = await params;
+  const { locale: rawLocale } = await params;
+  const locale = resolveLocale(rawLocale) ?? routing.defaultLocale;
   const t = await getTranslations({ locale, namespace: "meta" });
-  return { title: t("title"), description: t("description") };
+  const title = t("title");
+  const description = t("description");
+
+  return {
+    metadataBase: new URL("https://movie-discovery-platform.vercel.app"),
+    title: {
+      default: title,
+      template: "%s · FRAME",
+    },
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: "FRAME",
+      locale: locale === "fa" ? "fa_IR" : "en_US",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+    icons: {
+      icon: "/favicon.ico",
+    },
+  };
 }
 
 export default async function LocaleLayout({
@@ -63,29 +90,30 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       dir={getDirection(locale)}
-      data-palette="gold"
       data-mode="dark"
       className={`${geist.variable} ${vazirmatn.variable}`}
       suppressHydrationWarning
     >
       <head>
-        {/* Runs before first paint to apply the saved palette/mode. */}
+        {/* Runs before first paint to apply the saved mode. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-dvh bg-background pb-[calc(4rem_+_env(safe-area-inset-bottom))] text-fg antialiased md:pb-0">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <a
-            href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-accent focus:px-4 focus:py-2 focus:text-accent-fg"
-          >
-            {t("skipToContent")}
-          </a>
-          <SiteHeader />
-          <main id="main">
-            {children}
-          </main>
-          <SiteFooter />
-          <MobileNavigation />
+          <PersonalProvider>
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-accent focus:px-4 focus:py-2 focus:text-accent-fg"
+            >
+              {t("skipToContent")}
+            </a>
+            <SiteHeader />
+            <main id="main">
+              {children}
+            </main>
+            <SiteFooter />
+            <MobileNavigation />
+          </PersonalProvider>
         </NextIntlClientProvider>
       </body>
     </html>
