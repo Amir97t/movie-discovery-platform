@@ -423,4 +423,164 @@ test.describe("Personal Library Foundation (Favorites, Watchlist, Watched)", () 
       }
     }
   });
+
+  test("Two-tab cross-tab synchronization: updates sync cleanly, filters probe/unrelated keys, and prevents feedback loop", async ({
+    page: tab1,
+    context,
+  }) => {
+    await mockImageResponses(tab1);
+    const tab2 = await context.newPage();
+    await mockImageResponses(tab2);
+
+    // Initial load: tab1 on Home, tab2 on Library
+    await tab1.goto("/en", { waitUntil: "domcontentloaded" });
+    await tab1.evaluate(() => {
+      try {
+        window.localStorage.clear();
+        window.localStorage.setItem("frame-appearance", JSON.stringify({ mode: "dark" }));
+      } catch {}
+    });
+
+    await tab2.goto("/en/library", { waitUntil: "domcontentloaded" });
+    const tab2FavCount = tab2.locator("[data-testid='tab-count-favorites']");
+    await expect(tab2FavCount).toHaveText("0");
+
+    // Start recording storage and custom events on both tabs
+    const attachMonitors = async (p: Page) => {
+      await p.evaluate(() => {
+        const win = window as unknown as {
+          __recordedStorageEvents: Array<{ key: string | null; newValue: string | null }>;
+          __personalUpdatedDispatches: number;
+        };
+        win.__recordedStorageEvents = [];
+        win.__personalUpdatedDispatches = 0;
+
+        window.addEventListener("storage", (e) => {
+          win.__recordedStorageEvents.push({
+            key: e.key,
+            newValue: e.newValue,
+          });
+        });
+
+        window.addEventListener("mdp:personal-updated", () => {
+          win.__personalUpdatedDispatches++;
+        });
+      });
+    };
+
+    await attachMonitors(tab1);
+    await attachMonitors(tab2);
+
+    // 1. Change personal-library state in tab1: Favorite first movie card
+    const firstCard = tab1.locator("#picks article").first();
+    await expect(firstCard).toBeVisible();
+    const favBtn = firstCard.locator("[data-testid='card-favorite-btn']");
+    await expect(favBtn).toBeVisible();
+    await favBtn.click();
+    await expect(favBtn).toHaveAttribute("aria-pressed", "true");
+
+    // 2. Tab2 must reflect the updated state reactively without manual reload
+    await expect(tab2FavCount).toHaveText("1");
+    const tab2Cards = tab2.locator("[data-testid='library-container'] article");
+    await expect(tab2Cards).toHaveCount(1);
+
+    // 3. Tab1 writes unrelated keys and simulated probe keys
+    const dispatchesBeforeNoise = await tab2.evaluate(
+      () =>
+        (window as unknown as { __personalUpdatedDispatches?: number })
+          .__personalUpdatedDispatches ?? 0
+    );
+
+    const eventsCountBeforeNoise = await tab2.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __recordedStorageEvents?: Array<{ key: string | null; newValue: string | null }>;
+          }
+        ).__recordedStorageEvents?.length ?? 0
+    );
+
+    // Write unrelated appearance setting
+    await tab1.evaluate(() => {
+      window.localStorage.setItem("frame-appearance", JSON.stringify({ mode: "light" }));
+    });
+
+    // Write temporary probe key
+    await tab1.evaluate(() => {
+      window.localStorage.setItem("__mdp_storage_probe__", "1");
+      window.localStorage.removeItem("__mdp_storage_probe__");
+    });
+
+    // Deterministic bounded poll: wait until tab2 has actually received the noise events from tab1
+    await expect
+      .poll(
+        async () => {
+          return await tab2.evaluate((startIndex) => {
+            const allEvents =
+              (
+                window as unknown as {
+                  __recordedStorageEvents?: Array<{ key: string | null; newValue: string | null }>;
+                }
+              ).__recordedStorageEvents ?? [];
+            const newEvents = allEvents.slice(startIndex);
+            const hasAppearance = newEvents.some(
+              (e) => e.key === "frame-appearance" && e.newValue?.includes("light")
+            );
+            const probeEvents = newEvents.filter((e) => e.key === "__mdp_storage_probe__");
+            const hasProbeSet = probeEvents.some((e) => e.newValue !== null);
+            const hasProbeRemoved = probeEvents.some((e) => e.newValue === null);
+            return hasAppearance && hasProbeSet && hasProbeRemoved;
+          }, eventsCountBeforeNoise);
+        },
+        {
+          message: "Wait for Tab 2 to record appearance and probe storage events from Tab 1",
+          timeout: 5000,
+        }
+      )
+      .toBe(true);
+
+    // 4. In tab2, personalUpdated dispatches must NOT have increased
+    const dispatchesAfterNoise = await tab2.evaluate(
+      () =>
+        (window as unknown as { __personalUpdatedDispatches?: number })
+          .__personalUpdatedDispatches ?? 0
+    );
+    expect(dispatchesAfterNoise).toBe(dispatchesBeforeNoise);
+    await expect(tab2FavCount).toHaveText("1");
+
+    // 5. Verify storage event count is strictly bounded (no runaway feedback loop)
+    const tab2Events = await tab2.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __recordedStorageEvents?: Array<{ key: string | null }>;
+          }
+        ).__recordedStorageEvents ?? []
+    );
+    const personalKeyEvents = tab2Events.filter((e) => e.key === "mdp_personal_v1");
+    expect(personalKeyEvents.length).toBe(1);
+
+    // In tab1, verify tab2 never echoed any feedback probe events
+    const tab1Events = await tab1.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __recordedStorageEvents?: Array<{ key: string | null }>;
+          }
+        ).__recordedStorageEvents ?? []
+    );
+    const tab1PersonalEchoEvents = tab1Events.filter(
+      (e) => e.key === "mdp_personal_v1"
+    );
+    expect(tab1PersonalEchoEvents.length).toBe(0);
+
+    // 6. Verify unrelated appearance preferences remained preserved in localStorage
+    const storedAppearance = await tab2.evaluate(() =>
+      window.localStorage.getItem("frame-appearance")
+    );
+    expect(storedAppearance).toBeTruthy();
+    expect(storedAppearance).toContain("light");
+
+    await tab2.close();
+  });
 });
