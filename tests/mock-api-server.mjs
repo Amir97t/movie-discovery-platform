@@ -33,6 +33,7 @@ function generateMovie(id, title, genre) {
 // Canonical movie records used across all mock responses.
 const MOVIE_1 = generateMovie(1, "The Shawshank Redemption", "Drama");
 const MOVIE_250 = generateMovie(250, "Movie 250", "Drama");
+const SPIDER_MAN_MOVIE = generateMovie(301, "Spider-Man", "Action");
 
 const ALL_MOVIES = Array.from({ length: 35 }, (_, i) => {
   if (i === 0) return MOVIE_1;
@@ -116,7 +117,7 @@ function createServer() {
         const normQ = q.trim().toLowerCase();
         let matched = [];
         if (normQ) {
-          matched = [...ALL_MOVIES, ...SCI_FI_MOVIES, ...CRIME_MOVIES].filter((m) =>
+          matched = [...ALL_MOVIES, ...SCI_FI_MOVIES, ...CRIME_MOVIES, SPIDER_MAN_MOVIE].filter((m) =>
             m.title.toLowerCase().includes(normQ),
           );
         }
@@ -173,7 +174,8 @@ function createServer() {
       const found =
         ALL_MOVIES.find((m) => m.id === id) ||
         SCI_FI_MOVIES.find((m) => m.id === id) ||
-        CRIME_MOVIES.find((m) => m.id === id);
+        CRIME_MOVIES.find((m) => m.id === id) ||
+        (SPIDER_MAN_MOVIE.id === id ? SPIDER_MAN_MOVIE : null);
       if (found) {
         jsonResponse(res, 200, found);
         return;

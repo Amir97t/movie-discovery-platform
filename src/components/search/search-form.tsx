@@ -12,6 +12,9 @@ export interface SearchFormProps {
   inputPlaceholder: string;
   submitLabel: string;
   className?: string;
+  onSearchSubmit?: () => void;
+  inputRef?: React.Ref<HTMLInputElement>;
+  autoFocus?: boolean;
 }
 
 export function SearchForm({
@@ -21,6 +24,9 @@ export function SearchForm({
   inputPlaceholder,
   submitLabel,
   className,
+  onSearchSubmit,
+  inputRef,
+  autoFocus,
 }: SearchFormProps) {
   const router = useRouter();
   const inputId = useId();
@@ -30,6 +36,8 @@ export function SearchForm({
     const formData = new FormData(e.currentTarget);
     const rawQ = formData.get("q");
     const q = typeof rawQ === "string" ? rawQ.trim().replace(/\s+/g, " ") : "";
+
+    onSearchSubmit?.();
 
     if (!q) {
       router.push("/search");
@@ -49,22 +57,24 @@ export function SearchForm({
       <label htmlFor={inputId} className="sr-only">
         {inputLabel}
       </label>
-      <div className="relative flex-1">
+      <div className="relative min-w-0 flex-1">
         <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
         <input
+          ref={inputRef}
           id={inputId}
           type="search"
           name="q"
           defaultValue={initialQuery}
           placeholder={inputPlaceholder}
           autoComplete="off"
+          autoFocus={autoFocus}
           dir="auto"
           className="w-full rounded-control border border-line bg-surface/80 py-2.5 pe-4 ps-10 text-sm text-fg placeholder:text-muted/70 transition-colors focus:border-accent focus:bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>
       <button
         type="submit"
-        className="inline-flex min-h-10 items-center justify-center rounded-control bg-accent px-4 py-2 text-sm font-semibold text-accent-fg shadow-sm transition-all hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent active:scale-[0.98]"
+        className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-control bg-accent px-4 py-2 text-sm font-semibold text-accent-fg shadow-sm transition-all hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent active:scale-[0.98]"
       >
         {submitLabel}
       </button>

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { FIXTURE_MOVIES } from "./catalog-fixtures";
 import {
   APPLICATION_PAGE_SIZE,
+  canonicalizeApiSearchQuery,
   clearApiMetadataCache,
   fetchPaginatedMoviesFromApi,
   fetchRawApiPage,
@@ -17,7 +18,9 @@ import {
   getMoviesByGenre,
   getMoviesByPage,
   getMoviesBySearch,
+  matchFixture,
   MovieNotFoundError,
+  normalizeSearchText,
   paginateItems,
   resolveGenreKey,
   shuffleCandidates,
@@ -2129,6 +2132,104 @@ describe("Phase 2 & 2.1 - 15-movie pagination, hero candidates and metadata disc
       expect(result.source).toBe("fixture");
       expect(result.movies).toHaveLength(0);
       expect(result.metadata.total_count).toBe("0");
+    });
+
+    it("12. canonicalizes spider-man search query variations to 'spider-man' for the external API", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const variations = ["spiderman", "spider man", "spider-man", "Spider-Man", "SPIDER MAN"];
+
+      for (const query of variations) {
+        fetchMock.mockClear();
+        fetchMock.mockResolvedValueOnce(
+          createMockResponse([mockMovie], {
+            current_page: 1,
+            per_page: 15,
+            page_count: 1,
+            total_count: 1,
+          }),
+        );
+
+        expect(canonicalizeApiSearchQuery(query)).toBe("spider-man");
+
+        const result = await getMoviesBySearch(query, 1, "en");
+        expect(result.source).toBe("api");
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        const urlCalled = fetchMock.mock.calls[0][0] as string;
+        expect(urlCalled).toContain("q=spider-man");
+      }
+    });
+
+    it("13. preserves unrelated queries unchanged in API requests", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const regularQueries = ["spider", "the matrix", "superman", "iron man"];
+
+      for (const query of regularQueries) {
+        fetchMock.mockClear();
+        fetchMock.mockResolvedValueOnce(
+          createMockResponse([mockMovie], {
+            current_page: 1,
+            per_page: 15,
+            page_count: 1,
+            total_count: 1,
+          }),
+        );
+
+        expect(canonicalizeApiSearchQuery(query)).toBe(query);
+
+        await getMoviesBySearch(query, 1, "en");
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const urlCalled = fetchMock.mock.calls[0][0] as string;
+        const expected = new URLSearchParams({ q: query }).toString();
+        expect(urlCalled).toContain(expected);
+      }
+    });
+
+    it("14. fixture matching handles separator variations (hyphen and whitespace)", () => {
+      const sampleSpiderFixture = {
+        id: "fixture-spider-man",
+        title: { en: "Spider-Man", fa: "مرد عنکبوتی" },
+        year: 2022,
+        rating: 8.0,
+        runtimeMinutes: 120,
+        genres: ["action" as const],
+        art: ["#000", "#fff"] as const,
+      };
+
+      // English separator variations against "Spider-Man"
+      expect(matchFixture(sampleSpiderFixture, "spiderman", "en")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "spider man", "en")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "spider-man", "en")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "Spider-Man", "en")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "spider", "en")).toBe(true);
+
+      // Persian separator variations against "مرد عنکبوتی"
+      expect(matchFixture(sampleSpiderFixture, "مرد عنکبوتی", "fa")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "مرد-عنکبوتی", "fa")).toBe(true);
+      expect(matchFixture(sampleSpiderFixture, "مردعنکبوتی", "fa")).toBe(true);
+
+      // Unrelated fixture should not match
+      const unrelatedFixture = {
+        id: "fixture-other",
+        title: { en: "The Batman", fa: "بتمن" },
+        year: 2022,
+        rating: 8.0,
+        runtimeMinutes: 120,
+        genres: ["action" as const],
+        art: ["#000", "#fff"] as const,
+      };
+      expect(matchFixture(unrelatedFixture, "spiderman", "en")).toBe(false);
+    });
+
+    it("15. preserves existing Persian normalization (yeh, kaf, diacritics, zero-width characters)", () => {
+      // Arabic yeh (ي) -> Persian yeh (ی)
+      expect(normalizeSearchText("فيلم")).toBe("فیلم");
+      // Arabic kaf (ك) -> Persian kaf (ک)
+      expect(normalizeSearchText("كتاب")).toBe("کتاب");
+      // Arabic diacritics removal
+      expect(normalizeSearchText("فِیلْم")).toBe("فیلم");
+      // Zero-width spaces/joiners removal
+      expect(normalizeSearchText("سینما\u200Cها")).toBe("سینماها");
     });
   });
 });

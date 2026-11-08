@@ -1,6 +1,6 @@
-import { Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AppearanceMenu } from "@/components/appearance/appearance-menu";
+import { HeaderSearch } from "@/components/search/header-search";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { Link } from "@/i18n/navigation";
 import { DesktopNav } from "./desktop-nav";
@@ -21,16 +21,7 @@ export async function SiteHeader() {
         </Link>
         <DesktopNav />
         <div className="flex items-center gap-1 sm:gap-2">
-          <Link
-            href="/search"
-            aria-label={t("searchMovies")}
-            title={t("searchMovies")}
-            data-testid="global-search-link"
-            className="inline-flex size-11 items-center justify-center rounded-pill text-fg transition-colors duration-200 hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            <Search className="size-5" />
-            <span className="sr-only">{t("searchMovies")}</span>
-          </Link>
+          <HeaderSearch />
           <AppearanceMenu />
         </div>
       </div>

@@ -20,27 +20,173 @@ test.describe("Phase 4 Search Experience & API Integration", () => {
     await mockImageResponses(page);
   });
 
-  test("Global header search entry point is accessible and navigates to localized search", async ({ page }) => {
+  test("Global header search popover opens accessibly and submits localized searches", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/en");
 
-    const searchLink = page.locator("[data-testid='global-search-link']");
-    await expect(searchLink).toBeVisible();
-    await expect(searchLink).toHaveAttribute("aria-label", "Search movies");
+    const searchButton = page.locator("[data-testid='global-search-button']");
+    const searchPanel = page.locator("[data-testid='global-search-panel']");
 
-    // Click search link and verify navigation
-    await searchLink.click();
-    await expect(page).toHaveURL(/\/en\/search/);
+    await expect(searchButton).toBeVisible();
+    await expect(searchButton).toHaveAttribute("aria-label", "Search movies");
+    await expect(searchButton).toHaveAttribute("aria-expanded", "false");
+
+    // Verify aria-controls is non-empty and references exactly one element
+    const ariaControls = await searchButton.getAttribute("aria-controls");
+    expect(ariaControls).toBeTruthy();
+    expect(ariaControls?.trim().length).toBeGreaterThan(0);
+
+    const controlledElement = page.locator(`#${ariaControls}`);
+    await expect(controlledElement).toHaveCount(1);
+    await expect(controlledElement).toBeHidden();
+    await expect(controlledElement).toHaveAttribute("hidden", "");
+    await expect(searchPanel).toBeHidden();
+
+    // 1. Click search button: opens panel without changing URL/route
+    await searchButton.click();
+    expect(page.url()).toMatch(/\/en\/?$/);
+    await expect(searchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(controlledElement).toBeVisible();
+    await expect(searchPanel).toBeVisible();
+
+    // 2. Search input receives focus immediately
+    const searchInput = searchPanel.locator("input[type='search']");
+    await expect(searchInput).toBeVisible();
+    await expect(searchInput).toBeFocused();
+
+    // 3. Escape key closes panel and restores focus to search button
+    await page.keyboard.press("Escape");
+    await expect(searchPanel).toBeHidden();
+    await expect(controlledElement).toBeHidden();
+    await expect(searchButton).toBeFocused();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "false");
+
+    // 4. Click outside closes panel
+    await searchButton.click();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(searchPanel).toBeVisible();
+    await page.locator("main").click({ position: { x: 20, y: 50 } });
+    await expect(searchPanel).toBeHidden();
+    await expect(controlledElement).toBeHidden();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "false");
+
+    // 5. Toggle button closes panel
+    await searchButton.click();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(searchPanel).toBeVisible();
+    await searchButton.click();
+    await expect(searchPanel).toBeHidden();
+    await expect(controlledElement).toBeHidden();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "false");
+
+    // 6. Submitting query from popover navigates to localized search results and closes panel
+    await searchButton.click();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(searchPanel).toBeVisible();
+    await searchInput.fill("Shawshank");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/en\/search\?q=Shawshank/);
+    await expect(searchPanel).toBeHidden();
+    await expect(controlledElement).toBeHidden();
+    await expect(searchButton).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator("h1")).toHaveText(/Search/);
+    await expect(page.locator("article:has-text('The Shawshank Redemption')")).toBeVisible();
 
-    // Verify on Persian locale
+    // 7. Verify on Persian locale
     await page.goto("/fa");
-    const faSearchLink = page.locator("[data-testid='global-search-link']");
-    await expect(faSearchLink).toBeVisible();
-    await expect(faSearchLink).toHaveAttribute("aria-label", "جستجوی فیلم‌ها");
-    await faSearchLink.click();
-    await expect(page).toHaveURL(/\/fa\/search/);
+    const faSearchButton = page.locator("[data-testid='global-search-button']");
+    const faSearchPanel = page.locator("[data-testid='global-search-panel']");
+
+    await expect(faSearchButton).toBeVisible();
+    await expect(faSearchButton).toHaveAttribute("aria-label", "جستجوی فیلم‌ها");
+    await expect(faSearchButton).toHaveAttribute("aria-expanded", "false");
+
+    const faAriaControls = await faSearchButton.getAttribute("aria-controls");
+    expect(faAriaControls).toBeTruthy();
+    expect(faAriaControls?.trim().length).toBeGreaterThan(0);
+
+    const faControlledElement = page.locator(`#${faAriaControls}`);
+    await expect(faControlledElement).toHaveCount(1);
+    await expect(faControlledElement).toBeHidden();
+    await expect(faControlledElement).toHaveAttribute("hidden", "");
+    await expect(faSearchPanel).toBeHidden();
+
+    // Persian: click opens panel without changing route
+    await faSearchButton.click();
+    expect(page.url()).toMatch(/\/fa\/?$/);
+    await expect(faSearchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(faControlledElement).toBeVisible();
+    await expect(faSearchPanel).toBeVisible();
+
+    const faSearchInput = faSearchPanel.locator("input[type='search']");
+    await expect(faSearchInput).toBeVisible();
+    await expect(faSearchInput).toBeFocused();
+
+    // Persian: Escape closes panel and restores focus
+    await page.keyboard.press("Escape");
+    await expect(faSearchPanel).toBeHidden();
+    await expect(faControlledElement).toBeHidden();
+    await expect(faSearchButton).toBeFocused();
+    await expect(faSearchButton).toHaveAttribute("aria-expanded", "false");
+
+    // Persian: submit query from popover navigates to localized search and closes panel
+    await faSearchButton.click();
+    await expect(faSearchButton).toHaveAttribute("aria-expanded", "true");
+    await expect(faSearchPanel).toBeVisible();
+    await faSearchInput.fill("ماتریکس");
+    await faSearchPanel.locator("button[type='submit']").click();
+    await expect(page).toHaveURL(/\/fa\/search\?q=/);
+    await expect(faSearchPanel).toBeHidden();
+    await expect(faControlledElement).toBeHidden();
+    await expect(faSearchButton).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator("h1")).toHaveText(/جستجو/);
+  });
+
+  test("Responsive search popover has zero horizontal overflow across viewports (EN and FA)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const viewports = [
+      { name: "Small mobile", width: 320, height: 700, isMobile: true },
+      { name: "Mobile", width: 390, height: 844, isMobile: true },
+      { name: "Tablet", width: 768, height: 1024, isMobile: false },
+      { name: "Large tablet", width: 1024, height: 768, isMobile: false },
+      { name: "Desktop", width: 1280, height: 800, isMobile: false },
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+
+      // Test English
+      await page.goto("/en");
+      const searchButton = page.locator("[data-testid='global-search-button']");
+      const searchPanel = page.locator("[data-testid='global-search-panel']");
+      await searchButton.click();
+      await expect(searchPanel).toBeVisible();
+
+      // Check horizontal overflow: scrollWidth must be <= clientWidth
+      const overflowEn = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+      });
+      expect(overflowEn, `Horizontal overflow detected at ${vp.name} (${vp.width}x${vp.height}) in EN`).toBe(false);
+
+      // Verify layout integrity: nav components are intact
+      if (vp.isMobile) {
+        await expect(page.locator("nav[data-mobile-nav]")).toBeVisible();
+      } else {
+        await expect(page.locator("header nav")).toBeVisible();
+      }
+
+      // Test Persian (RTL)
+      await page.goto("/fa");
+      const faSearchButton = page.locator("[data-testid='global-search-button']");
+      const faSearchPanel = page.locator("[data-testid='global-search-panel']");
+      await faSearchButton.click();
+      await expect(faSearchPanel).toBeVisible();
+
+      const overflowFa = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+      });
+      expect(overflowFa, `Horizontal overflow detected at ${vp.name} (${vp.width}x${vp.height}) in FA`).toBe(false);
+    }
   });
 
   test("English search: submit query, verify URL encoding, prefilled input, and URL persistence on reload", async ({ page }) => {
@@ -69,6 +215,38 @@ test.describe("Phase 4 Search Experience & API Integration", () => {
     await expect(page).toHaveURL(/\/en\/search\?q=Shawshank/);
     await expect(page.locator("input[type='search']")).toHaveValue("Shawshank");
     await expect(page.locator("article:has-text('The Shawshank Redemption')")).toBeVisible();
+  });
+
+  test("Spider-Man query variations: 'spiderman' displays Spider-Man while preserving input and URL, and 'spider-man' and 'spider' continue to work", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // 1. Searching "spiderman" preserves original query in URL and input, displays Spider-Man
+    await page.goto("/en/search");
+    const searchInput = page.locator("main input[type='search']");
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill("spiderman");
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(/\/en\/search\?q=spiderman$/);
+    await expect(page.locator("main input[type='search']")).toHaveValue("spiderman");
+    const spiderCard = page.locator("article:has-text('Spider-Man')");
+    await expect(spiderCard).toBeVisible();
+
+    // 2. Searching "spider-man" preserves query in URL and input, displays Spider-Man
+    await searchInput.fill("spider-man");
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(/\/en\/search\?q=spider-man$/);
+    await expect(page.locator("main input[type='search']")).toHaveValue("spider-man");
+    await expect(page.locator("article:has-text('Spider-Man')")).toBeVisible();
+
+    // 3. Searching "spider" preserves query in URL and input, displays Spider-Man
+    await searchInput.fill("spider");
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(/\/en\/search\?q=spider$/);
+    await expect(page.locator("main input[type='search']")).toHaveValue("spider");
+    await expect(page.locator("article:has-text('Spider-Man')")).toBeVisible();
   });
 
   test("Persian search: RTL layout, Persian query, and URL encoding", async ({ page }) => {

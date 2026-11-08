@@ -768,6 +768,24 @@ export async function getAllMovies(locale: CatalogLocale): Promise<Movie[]> {
 }
 
 /**
+ * Canonical search alias map for queries where users frequently omit or alter separators.
+ * Normalizes variations such as "spiderman" and "spider man" to the canonical form expected
+ * by the upstream movie catalog API.
+ */
+const API_SEARCH_ALIASES: Readonly<Record<string, string>> = {
+  spiderman: "spider-man",
+};
+
+/**
+ * Maps known user query variations to their canonical API query representation.
+ * Unrelated queries are preserved verbatim.
+ */
+export function canonicalizeApiSearchQuery(query: string): string {
+  const compact = query.trim().toLowerCase().replace(/[-\s_]+/g, "");
+  return API_SEARCH_ALIASES[compact] ?? query;
+}
+
+/**
  * Normalizes text for search matching, handling case insensitivity in English
  * and common Persian/Arabic character variations (yeh, kaf, diacritics, and zero-width spaces).
  */
@@ -782,6 +800,22 @@ export function normalizeSearchText(text: string): string {
 }
 
 /**
+ * Checks whether candidate text matches a query, accounting for separator variations
+ * (such as hyphens and whitespace) while preserving full Persian character normalization.
+ */
+function matchesNormalizedText(target: string, normQ: string, collapsedQ: string): boolean {
+  const normTarget = normalizeSearchText(target);
+  if (!normTarget) return false;
+  if (normTarget.includes(normQ)) return true;
+
+  if (collapsedQ) {
+    const collapsedTarget = normTarget.replace(/[-\s_]+/g, "");
+    if (collapsedTarget.includes(collapsedQ)) return true;
+  }
+  return false;
+}
+
+/**
  * Deterministically checks whether a fixture movie matches a search query.
  * Matches against localized title, localized synopsis, and genres.
  */
@@ -792,27 +826,30 @@ export function matchFixture(
 ): boolean {
   const normQ = normalizeSearchText(query);
   if (!normQ) return false;
+  const collapsedQ = normQ.replace(/[-\s_]+/g, "");
 
   // Title matching in requested locale or bilingual fallback
-  const locTitle = normalizeSearchText(fixture.title[locale] ?? "");
-  const enTitle = normalizeSearchText(fixture.title.en);
-  const faTitle = normalizeSearchText(fixture.title.fa);
-  if (locTitle.includes(normQ) || enTitle.includes(normQ) || faTitle.includes(normQ)) {
+  if (
+    matchesNormalizedText(fixture.title[locale] ?? "", normQ, collapsedQ) ||
+    matchesNormalizedText(fixture.title.en, normQ, collapsedQ) ||
+    matchesNormalizedText(fixture.title.fa, normQ, collapsedQ)
+  ) {
     return true;
   }
 
   // Synopsis matching
   if (fixture.synopsis) {
-    const locSyn = normalizeSearchText(fixture.synopsis[locale] ?? "");
-    const enSyn = normalizeSearchText(fixture.synopsis.en);
-    const faSyn = normalizeSearchText(fixture.synopsis.fa);
-    if (locSyn.includes(normQ) || enSyn.includes(normQ) || faSyn.includes(normQ)) {
+    if (
+      matchesNormalizedText(fixture.synopsis[locale] ?? "", normQ, collapsedQ) ||
+      matchesNormalizedText(fixture.synopsis.en, normQ, collapsedQ) ||
+      matchesNormalizedText(fixture.synopsis.fa, normQ, collapsedQ)
+    ) {
       return true;
     }
   }
 
   // Genre matching
-  if (fixture.genres.some((g) => normalizeSearchText(g).includes(normQ))) {
+  if (fixture.genres.some((g) => matchesNormalizedText(g, normQ, collapsedQ))) {
     return true;
   }
 
@@ -886,8 +923,9 @@ export async function getMoviesBySearch(
     };
   }
 
+  const apiQuery = canonicalizeApiSearchQuery(trimmedQuery);
   const params = new URLSearchParams();
-  params.set("q", trimmedQuery);
+  params.set("q", apiQuery);
   const searchBaseUrl = `${MOVIES_API_ORIGIN}/api/v1/movies?${params.toString()}`;
 
   try {
