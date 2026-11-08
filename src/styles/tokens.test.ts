@@ -17,12 +17,12 @@ function contrast(a: string, b: string): number {
 
 const css = readFileSync(join(process.cwd(), "src/styles/tokens.css"), "utf8");
 
-function themeTokens(palette: string, mode: string): Record<string, string> {
+function themeTokens(mode: string): Record<string, string> {
   const pattern = new RegExp(
-    `\\[data-palette="${palette}"\\]\\[data-mode="${mode}"\\]\\s*\\{([^}]*)\\}`,
+    `\\[data-mode="${mode}"\\]\\s*\\{([^}]*)\\}`,
   );
   const block = pattern.exec(css)?.[1];
-  if (!block) throw new Error(`theme block missing: ${palette}-${mode}`);
+  if (!block) throw new Error(`theme block missing: ${mode}`);
   const tokens: Record<string, string> = {};
   for (const match of block.matchAll(/--([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) {
     tokens[match[1]!] = match[2]!;
@@ -30,15 +30,10 @@ function themeTokens(palette: string, mode: string): Record<string, string> {
   return tokens;
 }
 
-const THEMES = [
-  ["gold", "dark"],
-  ["gold", "light"],
-  ["crimson", "dark"],
-  ["crimson", "light"],
-] as const;
+const MODES = ["dark", "light"] as const;
 
-describe.each(THEMES)("%s-%s tokens", (palette, mode) => {
-  const t = themeTokens(palette, mode);
+describe.each(MODES)("%s mode tokens", (mode) => {
+  const t = themeTokens(mode);
   const surfaces = ["background", "surface", "surface-raised"] as const;
 
   it("body and muted text reach 4.5:1 on every surface", () => {
@@ -48,12 +43,15 @@ describe.each(THEMES)("%s-%s tokens", (palette, mode) => {
     }
   });
 
-  it("accent works as text on every surface and carries its foreground at 4.5:1", () => {
+  it("text-safe accent reaches 4.5:1 on background, surface, and raised surface", () => {
     for (const surface of surfaces) {
-      expect(contrast(t["accent"]!, t[surface]!), `accent on ${surface}`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(t["accent-text"]!, t[surface]!), `accent-text on ${surface}`).toBeGreaterThanOrEqual(4.5);
     }
-    expect(contrast(t["accent-foreground"]!, t["accent"]!)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(t["accent-foreground"]!, t["accent-hover"]!)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("primary action button carries its foreground at 4.5:1 in normal and hover states", () => {
+    expect(contrast(t["accent-foreground"]!, t["accent"]!), "accent-foreground on accent").toBeGreaterThanOrEqual(4.5);
+    expect(contrast(t["accent-foreground"]!, t["accent-hover"]!), "accent-foreground on accent-hover").toBeGreaterThanOrEqual(4.5);
   });
 
   it("semantic text colors reach 4.5:1 on background and surface", () => {
